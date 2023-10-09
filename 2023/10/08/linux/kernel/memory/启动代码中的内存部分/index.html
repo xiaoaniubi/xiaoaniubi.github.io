@@ -1,0 +1,1052 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Gao Xiang">
+  <meta name="keywords" content="Linux">
+  
+    <meta name="description" content="开机启动中内存相关">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Xiaoa&#39;s Blog">
+<meta property="og:url" content="http://example.com/2023/10/08/linux/kernel/memory/%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%B8%AD%E7%9A%84%E5%86%85%E5%AD%98%E9%83%A8%E5%88%86/index.html">
+<meta property="og:site_name" content="Xiaoa&#39;s Blog">
+<meta property="og:description" content="开机启动中内存相关">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211013999.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309210957262.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309210958831.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211011374.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309210959118.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211003182.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211003979.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211004547.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211009173.png">
+<meta property="article:published_time" content="2023-10-08T10:50:46.443Z">
+<meta property="article:modified_time" content="2023-10-08T15:26:27.237Z">
+<meta property="article:author" content="Gao Xiang">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211013999.png">
+  
+  
+  
+  <title>Xiaoa&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.5","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"left","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Linux</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/%E6%B1%BD%E8%BD%A6.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text=""></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-10-08 18:50" pubdate>
+          星期日, 十月 8日 2023, 6:50 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          17k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          146 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="padding-left: 2rem; margin-right: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header"></h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="开机启动中内存相关"><a href="#开机启动中内存相关" class="headerlink" title="开机启动中内存相关"></a>开机启动中内存相关</h1><span id="more"></span>
+<p>在启动汇编代码文件 <code>arch/arm64/kernel/head.S</code> 中，刚开始 MMU 是关闭的，不能使用高速缓存功能，而在后面某个阶段会打开 MMU 并且使能数据高速缓存以提高性能。</p>
+<p><code>Documentation/arm64/booting.txt</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs c">- Caches, MMUs<br>  The MMU must be off.<br>  Instruction cache may be on or off.<br>  The address range corresponding to the loaded kernel image must be<br>  cleaned to the PoC. In the presence of a system cache or other<br>  coherent masters with caches enabled, this will typically require<br>  cache maintenance by VA rather than <span class="hljs-built_in">set</span>/way operations.<br>  System caches which respect the architected cache maintenance by VA<br>  operations must be configured and may be enabled.<br>  System caches which <span class="hljs-keyword">do</span> not respect architected cache maintenance by VA<br>  <span class="hljs-title function_">operations</span> <span class="hljs-params">(not recommended)</span> must be configured and disabled.<br></code></pre></td></tr></table></figure>
+
+<ol>
+<li>在关闭 MMU 时处理器访问的是物理地址，在打开 MMU 时处理器访问的时虚拟地址</li>
+<li>现在的大部分的处理器都是流水线架构，处理器会提前预取多条指令到流水线中。当打开 MMU 时，处理器流水线中已经有许多以<strong>物理地址</strong>方式预取的指令，在 MMU 开启后，处理器就会以虚拟地址来访问，然后到 MMU 中查找物理地址。</li>
+</ol>
+<p>所以为了在开启 MMU 前后连续获取指令，并且保证不出错，需要在开启 MMU 前建立恒等映射（identity mapping），而且映射范围很小（通常和内核镜像差不多）</p>
+<h2 id="建立恒等映射"><a href="#建立恒等映射" class="headerlink" title="建立恒等映射"></a>建立恒等映射</h2><p>恒等映射是在 <code>__create_page_tables</code> 中建立的（其中去掉一些无关的分支代码，方便分析）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><code class="hljs assembly">/*<br> * Setup the initial page tables. We only setup the barest amount which is<br> * required to get the kernel running. The following sections are required:<br> *   - identity mapping to enable the MMU (low address, TTBR0)<br> *   - first few MB of the kernel linear mapping to jump to once the MMU has<br> *     been enabled<br> */<br>__create_page_tables:<br>	mov	x28, lr<br><br>	/*<br>	 * Invalidate the init page tables to avoid potential dirty cache lines<br>	 * being evicted. Other page tables are allocated in rodata as part of<br>	 * the kernel image, and thus are clean to the PoC per the boot<br>	 * protocol.<br>	 */<br>	adrp	x0, init_pg_dir<br>	adrp	x1, init_pg_end<br>	sub	x1, x1, x0<br>	bl	__inval_dcache_area<br><br>	/*<br>	 * Clear the init page tables.<br>	 */<br>	adrp	x0, init_pg_dir<br>	adrp	x1, init_pg_end<br>	sub	x1, x1, x0<br>1:	stp	xzr, xzr, [x0], #16<br>	stp	xzr, xzr, [x0], #16<br>	stp	xzr, xzr, [x0], #16<br>	stp	xzr, xzr, [x0], #16<br>	subs	x1, x1, #64<br>	b.ne	1b<br><br>	mov	x7, SWAPPER_MM_MMUFLAGS<br><br>	/*<br>	 * Create the identity mapping.<br>	 */<br>	adrp	x0, idmap_pg_dir<br>	adrp	x3, __idmap_text_start		// __pa(__idmap_text_start)<br><br>	mov	x5, #VA_BITS<br>1:<br>	adr_l	x6, vabits_user<br>	str	x5, [x6]<br>	dmb	sy<br>	dc	ivac, x6		// Invalidate potentially stale cache line<br><br>	adrp	x5, __idmap_text_end<br>	clz	x5, x5<br>	cmp	x5, TCR_T0SZ(VA_BITS)	// default T0SZ small enough?<br>	b.ge	1f			// .. then skip VA range extension<br><br>	adr_l	x6, idmap_t0sz<br>	str	x5, [x6]<br>	dmb	sy<br>	dc	ivac, x6		// Invalidate potentially stale cache line<br><br>	mov	x4, #1 &lt;&lt; (PHYS_MASK_SHIFT - PGDIR_SHIFT)<br>	str_l	x4, idmap_ptrs_per_pgd, x5<br>1:<br>	ldr_l	x4, idmap_ptrs_per_pgd<br>	mov	x5, x3				// __pa(__idmap_text_start)<br>	adr_l	x6, __idmap_text_end		// __pa(__idmap_text_end)<br><br>	map_memory x0, x1, x3, x6, x7, x3, x4, x10, x11, x12, x13, x14<br></code></pre></td></tr></table></figure>
+
+<p>第 9 行把 lr 放到 X28 临时寄存器中</p>
+<p>第 17、18 行加载 <code>init_pg_dir</code> 和 <code>init_pg_end</code> 到 X0、X1 中</p>
+<p><code>init_pg_dir</code> 和 <code>init_pg_end</code> 定义在链接器脚本 <code>arch/arm64/kernel/vmlinux.lds.S</code> 中，此页表大小为 INIT_DIR_SIZE</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c">. = ALIGN(PAGE_SIZE);<br>init_pg_dir = .;<br>. += INIT_DIR_SIZE;<br>init_pg_end = .;<br></code></pre></td></tr></table></figure>
+
+<p>第 19 行，将页表大小存入 X1 寄存器</p>
+<p>第 20 行调用 <code>__inval_dcache_area</code> 将 init_pg_dir 页表的高速缓存行无效，因为一会儿会建立内核空间的页表映射</p>
+<p>第 25 ~ 33 行，循环将 init_pg_dir 页表清零</p>
+<p>第 35 行 宏 SWAPPER_MM_MMUFLAGS 描述了段映射属性，定义为普通内存，PMD_TYPE_SECT 表示块映射，PMD_SECT_AF 表示可访问，PMD_SECT_S 表示共享属性</p>
+<p><code>arch/arm64/include/asm/kernel-pgtable.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> SWAPPER_PMD_FLAGS	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> SWAPPER_MM_MMUFLAGS	(PMD_ATTRINDX(MT_NORMAL) | SWAPPER_PMD_FLAGS)</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/pgtable-hwdef.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> PMD_TYPE_SECT		(_AT(pmdval_t, 1) &lt;&lt; 0)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PMD_SECT_AF		(_AT(pmdval_t, 1) &lt;&lt; 10)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PMD_SECT_S		(_AT(pmdval_t, 3) &lt;&lt; 8)</span><br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PMD_ATTRINDX(t)		(_AT(pmdval_t, (t)) &lt;&lt; 2)</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/memory.h</code><a id="内存属性"></a></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Memory types available.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MT_DEVICE_nGnRnE	0</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MT_DEVICE_nGnRE		1</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MT_DEVICE_GRE		2</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MT_NORMAL_NC		3</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MT_NORMAL		4</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MT_NORMAL_WT		5</span><br></code></pre></td></tr></table></figure>
+
+
+
+<p>详见 <strong>ARM Cortex-A Series Programmer’s Guide for ARMv8-A</strong> 手册 201 页</p>
+<p>第 40 行将 idmap_pg_dir 的物理地址载入 X0 寄存器，此为恒等映射页表，其定义在 vmlinux.lds.S 中</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c">. = ALIGN(PAGE_SIZE);<br>idmap_pg_dir = .;<br>. += IDMAP_DIR_SIZE;<br></code></pre></td></tr></table></figure>
+
+<p>页表大小为 IDMAP_DIR_SIZE，3 个连续页面，定义在 <code>arch/arm64/include/asm/kernel-pgtable.h</code> 中</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> IDMAP_PGTABLE_LEVELS	(ARM64_HW_PGTABLE_LEVELS(PHYS_MASK_SHIFT) - 1)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> IDMAP_DIR_SIZE		(IDMAP_PGTABLE_LEVELS * PAGE_SIZE)</span><br></code></pre></td></tr></table></figure>
+
+<p><code>include/generated/autoconf.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> CONFIG_ARM64_PA_BITS 48</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/pgtable-hwdef.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> PHYS_MASK_SHIFT   (CONFIG_ARM64_PA_BITS)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> ARM64_HW_PGTABLE_LEVELS(va_bits) (((va_bits) - 4) / (PAGE_SHIFT - 3))</span><br></code></pre></td></tr></table></figure>
+
+<p>很明显，这里的 3 个页面分表表示 PGD、PUD、PMD 页表，注意这里建立的是 2M 大小的块映射，而不是 4K 的页面映射</p>
+<p>第 41 行将 __idmap_text_start 载入 X3 寄存器，其为 .idmap.text 段的起始地址，除了开机启动 MMU 外，还有很多地方需要恒等映射，如唤醒处理器函数 cpu_do_resume</p>
+<p>第 43 行 VA_BITS 为虚拟地址宽度，默认为 48 位，.config 文件中一般配置 CONFIG_ARM64_VA_BITS&#x3D;48</p>
+<p>第 45 ~ 48 行，将 VA_BITS 存入 vabits_user 全局变量，并且清楚其对应的高速缓存</p>
+<p>第 50 ~ 53 行，判断 __idmap_text_end 是否超过了 VA_BITS 所能达到的地址范围，若没有超过跳到下面的 1 处</p>
+<p>第 63 行，将 idmap_ptrs_per_pgd 放入 X4 寄存器，idmap_ptrs_per_pgd 表示每个 PGD 中有多少页表项，它的值等于 PTRS_PER_PGD，定义在 <code>arch/arm64/include/asm/pgtable-hwdef.h</code> 中，若配置为 4 级页表，PTRS_PER_PGD 等于 512</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> PGDIR_SHIFT		ARM64_HW_PGTABLE_LEVEL_SHIFT(4 - CONFIG_PGTABLE_LEVELS)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PGDIR_SIZE		(_AC(1, UL) &lt;&lt; PGDIR_SHIFT)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PGDIR_MASK		(~(PGDIR_SIZE-1))</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PTRS_PER_PGD		(1 &lt;&lt; (MAX_USER_VA_BITS - PGDIR_SHIFT))</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/memory.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> MAX_USER_VA_BITS	VA_BITS		<span class="hljs-comment">// 48</span></span><br></code></pre></td></tr></table></figure>
+
+<p><code>include/generated/autoconf.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> CONFIG_PGTABLE_LEVELS 4</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/pgtable-hwdef.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Size mapped by an entry at level n ( 0 &lt;= n &lt;= 3)</span><br><span class="hljs-comment"> * We map (PAGE_SHIFT - 3) at all translation levels and PAGE_SHIFT bits</span><br><span class="hljs-comment"> * in the final page. The maximum number of translation levels supported by</span><br><span class="hljs-comment"> * the architecture is 4. Hence, starting at at level n, we have further</span><br><span class="hljs-comment"> * ((4 - n) - 1) levels of translation excluding the offset within the page.</span><br><span class="hljs-comment"> * So, the total number of bits mapped by an entry at level n is :</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> *  ((4 - n) - 1) * (PAGE_SHIFT - 3) + PAGE_SHIFT</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Rearranging it a bit we get :</span><br><span class="hljs-comment"> *   (4 - n) * (PAGE_SHIFT - 3) + 3</span><br><span class="hljs-comment"> */</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> ARM64_HW_PGTABLE_LEVEL_SHIFT(n)	((PAGE_SHIFT - 3) * (4 - (n)) + 3)</span><br></code></pre></td></tr></table></figure>
+
+<p>第 64 行，__idmap_text_start 物理地址存入 X5 寄存器</p>
+<p>第 65 行，__idmap_text_end 物理地址存入 X6 寄存器</p>
+<p>第 67 行，调用 map_memory 宏映射页表，这里再统一整理下参数列表</p>
+<p><code>map_memory</code> 也定义在 <code>arch/arm64/kernel/head.S</code> 中</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><code class="hljs assembly">/*<br> * Map memory for specified virtual address range. Each level of page table needed supports<br> * multiple entries. If a level requires n entries the next page table level is assumed to be<br> * formed from n pages.<br> *<br> *	tbl:	location of page table<br> *	rtbl:	address to be used for first level page table entry (typically tbl + PAGE_SIZE)<br> *	vstart:	start address to map<br> *	vend:	end address to map - we map [vstart, vend]<br> *	flags:	flags to use to map last level entries<br> *	phys:	physical address corresponding to vstart - physical memory is contiguous<br> *	pgds:	the number of pgd entries<br> *<br> * Temporaries:	istart, iend, tmp, count, sv - these need to be different registers<br> * Preserves:	vstart, vend, flags<br> * Corrupts:	tbl, rtbl, istart, iend, tmp, count, sv<br> */<br>.macro map_memory, tbl, rtbl, vstart, vend, flags, phys, pgds, istart, iend, tmp, count, sv<br>add \rtbl, \tbl, #PAGE_SIZE<br>mov \sv, \rtbl<br>mov \count, #0<br>compute_indices \vstart, \vend, #PGDIR_SHIFT, \pgds, \istart, \iend, \count<br>populate_entries \tbl, \rtbl, \istart, \iend, #PMD_TYPE_TABLE, #PAGE_SIZE, \tmp<br>mov \tbl, \sv<br>mov \sv, \rtbl<br>	<br>compute_indices \vstart, \vend, #SWAPPER_TABLE_SHIFT, #PTRS_PER_PMD, \istart, \iend, \count<br>populate_entries \tbl, \rtbl, \istart, \iend, #PMD_TYPE_TABLE, #PAGE_SIZE, \tmp<br>mov \tbl, \sv<br><br>compute_indices \vstart, \vend, #SWAPPER_BLOCK_SHIFT, #PTRS_PER_PTE, \istart, \iend, \count<br>bic \count, \phys, #SWAPPER_BLOCK_SIZE - 1<br>populate_entries \tbl, \count, \istart, \iend, \flags, #SWAPPER_BLOCK_SIZE, \tmp<br>.endm<br>	<br></code></pre></td></tr></table></figure>
+
+<p>tbl: 页表的起始地址</p>
+<p>rtbl: 下一级页表的首地址，通常为 tlb + PAGE_SIZE</p>
+<p>vstart: 要映射的虚拟首地址</p>
+<p>vend: 要映射的虚拟结束地址</p>
+<p>flags: 最后一级页表的属性</p>
+<p>phys: 映射对应的物理首地址</p>
+<p>pgds: PGD 的页表项个数</p>
+<p>其他参数都是临时的</p>
+<p>回到调用 <code>map_memory</code> 的地方，列车各个参数的值 x0, x1, x3, x6, x7, x3, x4, x10, x11, x12, x13, x14</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>rbl</td>
+<td>x0(idmap_pg_dir)</td>
+</tr>
+<tr>
+<td>rtbl</td>
+<td>idmap_pg_dir + PAGE_SIZE</td>
+</tr>
+<tr>
+<td>vstart</td>
+<td>__idmap_text_start</td>
+</tr>
+<tr>
+<td>vend</td>
+<td>__idmap_text_end</td>
+</tr>
+<tr>
+<td>flags</td>
+<td>SWAPPER_MM_MMUFLAGS</td>
+</tr>
+<tr>
+<td>phys</td>
+<td>__idmap_text_start</td>
+</tr>
+<tr>
+<td>pgds</td>
+<td>idmap_ptrs_per_pgd(PTRS_PER_PGD)</td>
+</tr>
+</tbody></table>
+<p>虚拟地址 vstart 和物理地址 phys 为什么一样呢？其实恒等映射就是相同的虚拟地址和物理地址做映射，才能在打开 MMU 前后丝滑的转换</p>
+<p>第 19 行，rtbl 指向了下一个页表首地址。之前说过恒等映射分配了连续 3 个页面的空间，所以 rbl + PAGE_SIZE 就是 PUD 的首地址了</p>
+<p>第 22 行，调用 <code>compute_indices</code> 宏计算 vstart 和 vend 在各自页表中的索引值</p>
+<p>第 23 行，调用 <code>populate_entries</code> 来设置页表项的内容</p>
+<p>第 22 ~ 23 行，设置第一级页表 PGD 的页表项</p>
+<p>第 27 ~ 28 行，设置第二级页表 PMD 的页表项</p>
+<p>第 31 ~ 32 行，设置最后一级页表 PT 的页表项</p>
+<p>这里看一下 <code>compute_indices</code></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><code class="hljs assembly">/*<br> * Compute indices of table entries from virtual address range. If multiple entries<br> * were needed in the previous page table level then the next page table level is assumed<br> * to be composed of multiple pages. (This effectively scales the end index).<br> *<br> *	vstart:	virtual address of start of range<br> *	vend:	virtual address of end of range<br> *	shift:	shift used to transform virtual address into index<br> *	ptrs:	number of entries in page table<br> *	istart:	index in table corresponding to vstart<br> *	iend:	index in table corresponding to vend<br> *	count:	On entry: how many extra entries were required in previous level, scales<br> *			  our end index.<br> *		On exit: returns how many extra entries required for next page table level<br> *<br> * Preserves:	vstart, vend, shift, ptrs<br> * Returns:	istart, iend, count<br> */<br>	.macro compute_indices, vstart, vend, shift, ptrs, istart, iend, count<br>	lsr	\iend, \vend, \shift<br>	mov	\istart, \ptrs<br>	sub	\istart, \istart, #1<br>	and	\iend, \iend, \istart	// iend = (vend &gt;&gt; shift) &amp; (ptrs - 1)<br>	mov	\istart, \ptrs<br>	mul	\istart, \istart, \count<br>	add	\iend, \iend, \istart	// iend += (count - 1) * ptrs<br>					// our entries span multiple tables<br><br>	lsr	\istart, \vstart, \shift<br>	mov	\count, \ptrs<br>	sub	\count, \count, #1<br>	and	\istart, \istart, \count<br><br>	sub	\count, \iend, \istart<br>	.endm<br></code></pre></td></tr></table></figure>
+
+<p>vstart: 虚拟首地址</p>
+<p>vend: 虚拟结束地址</p>
+<p>shift: 各级页表在虚拟地址中的偏移量</p>
+<p>ptrs: 各级页表中的页表项个数</p>
+<p>istart: vstart 对应的索引值</p>
+<p>iend: vend 对应的索引值</p>
+<p>再次列出调用时的参数值</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vstart</td>
+<td>__idmap_text_start</td>
+</tr>
+<tr>
+<td>vend</td>
+<td>__idmap_text_end</td>
+</tr>
+<tr>
+<td>shift</td>
+<td>PGDIR_SHIFT</td>
+</tr>
+<tr>
+<td>ptrs</td>
+<td>idmap_ptrs_per_pgd(PTRS_PER_PGD)</td>
+</tr>
+<tr>
+<td>count</td>
+<td>0</td>
+</tr>
+</tbody></table>
+<p>基本就是下面这样计算的：</p>
+<p>istart &#x3D; (vstart &gt;&gt; shift) &amp; (ptrs - 1)</p>
+<p>iend &#x3D; (vend &gt;&gt; shift) &amp; (ptrs - 1)</p>
+<p>这里看一些 <code>populate_entries</code> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs assembly">/*<br> * Macro to populate page table entries, these entries can be pointers to the next level<br> * or last level entries pointing to physical memory.<br> *<br> *	tbl:	page table address<br> *	rtbl:	pointer to page table or physical memory<br> *	index:	start index to write<br> *	eindex:	end index to write - [index, eindex] written to<br> *	flags:	flags for pagetable entry to or in<br> *	inc:	increment to rtbl between each entry<br> *	tmp1:	temporary variable<br> *<br> * Preserves:	tbl, eindex, flags, inc<br> * Corrupts:	index, tmp1<br> * Returns:	rtbl<br> */<br>	.macro populate_entries, tbl, rtbl, index, eindex, flags, inc, tmp1<br>.Lpe\@:	phys_to_pte \tmp1, \rtbl<br>	orr	\tmp1, \tmp1, \flags	// tmp1 = table entry<br>	str	\tmp1, [\tbl, \index, lsl #3]<br>	add	\rtbl, \rtbl, \inc	// rtbl = pa next level<br>	add	\index, \index, #1<br>	cmp	\index, \eindex<br>	b.ls	.Lpe\@<br>	.endm<br></code></pre></td></tr></table></figure>
+
+<p>tbl: 页表首地址</p>
+<p>rtbl: 下一级页表的基地址</p>
+<p>index: vstart 在页表中的索引</p>
+<p>eindex: vend 在页表中的索引</p>
+<p>flags: 页表项的属性</p>
+<p>inc: 每一个页表项</p>
+<p>tmp1: 临时使用</p>
+<p>回到第一次调用 <code>compute_indices</code> 的位置查看其参数值</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>tbl</td>
+<td>idmap_pg_dir</td>
+</tr>
+<tr>
+<td>rtlb</td>
+<td>idmap_pg_dir + PAGE_SIZE</td>
+</tr>
+<tr>
+<td>index</td>
+<td>调用 compute_indices 返回的 istart</td>
+</tr>
+<tr>
+<td>eindex</td>
+<td>调用 compute_indices 返回的 iend</td>
+</tr>
+<tr>
+<td>flags</td>
+<td>PMD_TYPE_TABLE</td>
+</tr>
+<tr>
+<td>inc</td>
+<td>PAGE_SIZE</td>
+</tr>
+</tbody></table>
+<p>第 18 ~ 20 行，将下一级页表首地址 + 属性 PMD_TYPE_TABLE 设置到对应的页表项中，即页表首地址 + index * 8</p>
+<p>第 21 ~ 24 行，index + 1，设置后面的页表项，即 index ~ eindex 间所有的页表项，这里其实只设置一次，因为只有一个 PUD 设置到 PGD 中</p>
+<p>综上所述，<code>__create_page_tables</code> 中的 <code>map_memory</code> 就创建了一个把 <code>.idmap.text</code> 段虚拟地址映射到相同物理地址上的恒等映射，映射的页表在 <code>idmap_pg_dir</code> 中</p>
+<p>我使用的 qemu 中物理起始地址为 0x40000000</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>]     start memory  : <span class="hljs-number">0x40000000</span><br></code></pre></td></tr></table></figure>
+
+<p>我们可以从 System.map 中找到哪些函数映射到了 .idmap.text 段中</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><code class="hljs c">ffff0000118d4000 T __idmap_text_start<br><br>ffff0000118d4000 T kimage_vaddr<br>ffff0000118d4008 T el2_setup<br>ffff0000118d405c t set_hcr<br>ffff0000118d412c t install_el2_stub<br>ffff0000118d4180 t set_cpu_boot_mode_flag<br>ffff0000118d41a4 T secondary_holding_pen<br>ffff0000118d41c8 t pen<br>ffff0000118d41dc T secondary_entry<br>ffff0000118d41e8 t secondary_startup<br>ffff0000118d4200 t __secondary_switched<br>ffff0000118d4234 T __enable_mmu<br>ffff0000118d428c T __cpu_secondary_check52bitva<br>ffff0000118d4290 t __no_granule_support<br>ffff0000118d42b4 t __relocate_kernel<br>ffff0000118d4300 t __primary_switch<br>ffff0000118d4378 T cpu_resume<br>ffff0000118d4398 T __cpu_soft_restart<br>ffff0000118d43d8 T cpu_do_resume<br>ffff0000118d444c T idmap_cpu_replace_ttbr1<br>ffff0000118d4480 t __idmap_kpti_flag<br>ffff0000118d4484 T idmap_kpti_install_ng_mappings<br>ffff0000118d44c0 t do_pgd<br>ffff0000118d44d8 t next_pgd<br>ffff0000118d44e8 t skip_pgd<br>ffff0000118d451c t walk_puds<br>ffff0000118d4524 t do_pud<br>ffff0000118d453c t next_pud<br>ffff0000118d454c t skip_pud<br>ffff0000118d455c t walk_pmds<br>ffff0000118d4564 t do_pmd<br>ffff0000118d457c t next_pmd<br>ffff0000118d458c t skip_pmd<br>ffff0000118d459c t walk_ptes<br>ffff0000118d45a4 t do_pte<br>ffff0000118d45c8 t skip_pte<br>ffff0000118d45d8 t __idmap_kpti_secondary<br>ffff0000118d4620 T __cpu_setup<br><br>ffff0000118d46b8 T __idmap_text_end<br></code></pre></td></tr></table></figure>
+
+<p>可以看到恒等映射的段在内核镜像里</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211013999.png" srcset="/img/loading.gif" lazyload alt="image-20230921101313940"></p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309210957262.png" srcset="/img/loading.gif" lazyload alt="image-20230921095715143"></p>
+<p>那为什么这些函数就到了 .idmap.text 中，而其他函数没有呢？</p>
+<p>head.S 中有一行是这样写的，表示从这行开始后面的函数（<code>.pushsection &quot;.mmuoff.data.write&quot;, &quot;aw&quot;</code> 之前）都放入 .idmap.text 段，并且有可分配、可写、可执行的权限，</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs assembly">.section &quot;.idmap.text&quot;,&quot;awx&quot;<br></code></pre></td></tr></table></figure>
+
+<p>可以看到 kimage_vaddr 和 el2_setup 函数就是 System.map 中 .idmap.text 开始的前两个函数</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309210958831.png" srcset="/img/loading.gif" lazyload alt="image-20230921095828771"></p>
+<h2 id="建立内核映像页表"><a href="#建立内核映像页表" class="headerlink" title="建立内核映像页表"></a>建立内核映像页表</h2><p>在 <code>__create_page_tables</code> 恒等映射后面就是内核映像映射</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs assembly">	/*<br>	 * Map the kernel image (starting with PHYS_OFFSET).<br>	 */<br>	adrp	x0, init_pg_dir<br>	mov_q	x5, KIMAGE_VADDR + TEXT_OFFSET	// compile time __va(_text)<br>	add	x5, x5, x23			// add KASLR displacement<br>	mov	x4, PTRS_PER_PGD<br>	adrp	x6, _end			// runtime __pa(_end)<br>	adrp	x3, _text			// runtime __pa(_text)<br>	sub	x6, x6, x3			// _end - _text<br>	add	x6, x6, x5			// runtime __va(_end)<br><br>	map_memory x0, x1, x5, x6, x7, x3, x4, x10, x11, x12, x13, x14<br><br>	/*<br>	 * Since the page tables have been populated with non-cacheable<br>	 * accesses (MMU disabled), invalidate the idmap and swapper page<br>	 * tables again to remove any speculatively loaded cache lines.<br>	 */<br>	adrp	x0, idmap_pg_dir<br>	adrp	x1, init_pg_end<br>	sub	x1, x1, x0<br>	dmb	sy<br>	bl	__inval_dcache_area<br><br>	ret	x28<br>ENDPROC(__create_page_tables)<br></code></pre></td></tr></table></figure>
+
+<p>第 4 行，将内核页表的基地址 init_pg_dir 存入 X0</p>
+<p>第 5 行，将内核映像虚拟地址首地址 KIMAGE_VADDR + TEXT_OFFSET 存入 X5</p>
+<p>第 6 行，内核映像虚拟地址加上 KASLR 的值，使内核映像地址随机化，减小内存访问风险，x23 &#x3D; __PHYS_OFFSET，在启动代码入口设置的</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs assembly">ENTRY(stext)<br>	bl	preserve_boot_args<br>	bl	el2_setup			// Drop to EL1, w0=cpu_boot_mode<br>	adrp	x23, __PHYS_OFFSET<br></code></pre></td></tr></table></figure>
+
+<p>第 7 行，将 PTRS_PER_PGD，即 PGD 的页表项个数，存入 X4</p>
+<p>第 8 行，将内核映像的物理结束地址存入 X6</p>
+<p>第 9 行，将内核映像的物理首地址存入 X3</p>
+<p>第 10 行，将内核映像的大小存入 X6</p>
+<p>第 11 行，将内核映像的虚拟首地址存入 X6</p>
+<p>第 13 行，调用 <code>map_memory</code> 建立页表映射</p>
+<p>第 20 ~ 24 行，使恒等映像页表 idmap_pg_dir 和内核映像页表 init_pg_dir 对应的高速缓存无效，虽然还没使能 MMU，但数据有可能被预取到高速缓存中，因此要先清除</p>
+<p>第 26 行，函数返回</p>
+<p>综上所述，<code>__create_page_tables </code> 建立了两个映射，.idmap.text 段的恒等映射和内核映像的页表映射，那为什么要创建两个页表，而不是一个呢？</p>
+<p>ARM64 有两个页表基地址寄存器，TTBR0 和 TTBR1，当虚拟地址的第 63 位为 0 时使用 TTBR0，当第 63 位为 1 时使用 TTBR1</p>
+<p>在未开启 MMU 前使用的是物理地址，而且物理地址较小，第 63 位为 0，在开启 MMU 后的瞬间，MMU 访问的虚拟地址其实就是相同的很小的物理地址，所以此时要用 TTBR0，</p>
+<p>也就是说恒等映射使用 TTBR0，而把内核映像映射到内核空间（高 256T）时使用 TTBR1，后面 <code>__enable_mmu</code> 函数中会加载这两个页表</p>
+<p><strong>注意 init_pg_dir 位粗粒度的页表，因为内核映像很小，没必要做细粒度（如 4KB）的映射，后面会使用 <code>swapper_pg_dir</code> 作为细粒度的页表，然后就会丢弃掉 <code>idmap_pg_dir</code> 和 <code>init_pg_dir</code></strong> </p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211011374.png" srcset="/img/loading.gif" lazyload alt="image-20230921101142271"></p>
+<h2 id="设置系统内存属性"><a href="#设置系统内存属性" class="headerlink" title="设置系统内存属性"></a>设置系统内存属性</h2><p>mmu 初始化在 <code>__cpu_setup</code> 中完成，定义在 <code>arch/arm64/mm/proc.S</code> 中</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><code class="hljs assembly">/*<br> *	__cpu_setup<br> *<br> *	Initialise the processor for turning the MMU on.  Return in x0 the<br> *	value of the SCTLR_EL1 register.<br> */<br>	.pushsection &quot;.idmap.text&quot;, &quot;awx&quot;<br>ENTRY(__cpu_setup)<br>	tlbi	vmalle1				// Invalidate local TLB<br>	dsb	nsh<br><br>	mov	x0, #3 &lt;&lt; 20<br>	msr	cpacr_el1, x0			// Enable FP/ASIMD<br>	mov	x0, #1 &lt;&lt; 12			// Reset mdscr_el1 and disable<br>	msr	mdscr_el1, x0			// access to the DCC from EL0<br>	isb					// Unmask debug exceptions now,<br>	enable_dbg				// since this is per-cpu<br>	reset_pmuserenr_el0 x0			// Disable PMU access from EL0<br>	/*<br>	 * Memory region attributes for LPAE:<br>	 *<br>	 *   n = AttrIndx[2:0]<br>	 *			n	MAIR<br>	 *   DEVICE_nGnRnE	000	00000000<br>	 *   DEVICE_nGnRE	001	00000100<br>	 *   DEVICE_GRE		010	00001100<br>	 *   NORMAL_NC		011	01000100<br>	 *   NORMAL		100	11111111<br>	 *   NORMAL_WT		101	10111011<br>	 */<br>	ldr	x5, =MAIR(0x00, MT_DEVICE_nGnRnE) | \<br>		     MAIR(0x04, MT_DEVICE_nGnRE) | \<br>		     MAIR(0x0c, MT_DEVICE_GRE) | \<br>		     MAIR(0x44, MT_NORMAL_NC) | \<br>		     MAIR(0xff, MT_NORMAL) | \<br>		     MAIR(0xbb, MT_NORMAL_WT)<br>	msr	mair_el1, x5<br>	/*<br>	 * Prepare SCTLR<br>	 */<br>	mov_q	x0, SCTLR_EL1_SET<br>	/*<br>	 * Set/prepare TCR and TTBR. We use 512GB (39-bit) address range for<br>	 * both user and kernel.<br>	 */<br>	ldr	x10, =TCR_TxSZ(VA_BITS) | TCR_CACHE_FLAGS | TCR_SMP_FLAGS | \<br>			TCR_TG_FLAGS | TCR_KASLR_FLAGS | TCR_ASID16 | \<br>			TCR_TBI0 | TCR_A1 | TCR_KASAN_FLAGS<br><br>	ldr_l		x9, idmap_t0sz<br>	tcr_set_t0sz	x10, x9<br><br>	/*<br>	 * Set the IPS bits in TCR_EL1.<br>	 */<br>	tcr_compute_pa_size x10, #TCR_IPS_SHIFT, x5, x6<br>#ifdef CONFIG_ARM64_HW_AFDBM<br>	/*<br>	 * Enable hardware update of the Access Flags bit.<br>	 * Hardware dirty bit management is enabled later,<br>	 * via capabilities.<br>	 */<br>	mrs	x9, ID_AA64MMFR1_EL1<br>	and	x9, x9, #0xf<br>	cbz	x9, 1f<br>	orr	x10, x10, #TCR_HA		// hardware Access flag update<br>1:<br>#endif	/* CONFIG_ARM64_HW_AFDBM */<br>	msr	tcr_el1, x10<br>	ret					// return to head.S<br>ENDPROC(__cpu_setup)<br></code></pre></td></tr></table></figure>
+
+<p>可以看到此函数也在 .idmap.text 段中</p>
+<p>第 9 ~ 10 行，使 EL1 上所有 tlb 无效，并插入内存屏障指令确保指令完成</p>
+<p>…</p>
+<p>第 19 ~ 37 行，设置系统内存属性，linux 只使用了 6 种属性，分两大类</p>
+<p>NORMAL（普通内存，如 dram，可 cache）：</p>
+<ul>
+<li>写入具有 Normal 内存类型的内存位置(Inner 和 Outer 可缓存性均为 Non-cacheable 或 Write-through<br>cacheable)必须在有限的时间内到达内存系统中该位置的端点。对同一位置的两次写操作(其中至少有一次使用 Normal 内存类型)可能会在到达端点之前合并，除非两次写操作之间存在顺序前关系</li>
+<li>支持不对齐访问</li>
+<li>Normal 内存属性适用于幂等（是一个数学与计算机学概念，常见于抽象代数中。 在编程中一个幂等操作的特点是其任意多次执行所产生的影响均与一次执行的影响相同，也就是说对于同一个地址，多次读和读一次的结果是一样的）的内存位置，这意味着它们具有以下所有属性:<ul>
+<li>读取访问可以重复，没有副作用</li>
+<li>多次重复读取返回最后一次写入的值</li>
+<li>读取访问可以在没有副作用的情况下获取额外的内存位置</li>
+<li>如果在重复写操作之间所访问位置的内容没有改变，或者由于出现异常，则可以重复写访问而没有副作用</li>
+<li>内存访问操作可以在访问目标内存系统之前合并</li>
+</ul>
+</li>
+<li>对于访问普通内存，需要 DMB 指令来确保所需的顺序。</li>
+</ul>
+<p>DEVICE：设备内存，通常用于外设，如 usb、uart 等，不可以 cache</p>
+<table>
+<thead>
+<tr>
+<th>内存类型</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MT_NORMAL</td>
+<td>普通内存，可以 cache</td>
+</tr>
+<tr>
+<td>MT_NORMAL_NC</td>
+<td>普通内存，不可以 cache</td>
+</tr>
+<tr>
+<td>MT_NORMAL_WT</td>
+<td>普通内存，cache 和 内存同时写</td>
+</tr>
+<tr>
+<td>MT_DEVICE_nGnRnE</td>
+<td>设备内存，不聚合、不重排、不提前 ack</td>
+</tr>
+<tr>
+<td>MT_DEVICE_nGnRE</td>
+<td>设备内存，不聚合、不重排、可提前 ack</td>
+</tr>
+<tr>
+<td>MT_DEVICE_GRE</td>
+<td>设备内存，可聚合、可重排、可提前 ack</td>
+</tr>
+</tbody></table>
+<p>使用的 MAIR 宏</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> MAIR(attr, mt)	((attr) &lt;&lt; ((mt) * 8))</span><br></code></pre></td></tr></table></figure>
+
+<p><a href="#内存属性">对于内存属性，前面有介绍过</a></p>
+<p>以上 6 种内存属性会设置到 MAIR 寄存器中的 Attr0 ~ Attr5 中，以后页表项中的属性可以选择 MAIR 的 index 来表示自己的内存属性</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309210959118.png" srcset="/img/loading.gif" lazyload alt="image-20230921095904064"></p>
+<p>举个例子，看寄存器的值是怎么设置的</p>
+<p>我们看 DEVICE_nGnRE，要将它的值 0x00000100 设置到 0x001 * 8 的位置，即 Attr1，那 0x00000100 为什么表示 DEVICE_nGnRE 呢？</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211003182.png" srcset="/img/loading.gif" lazyload alt="image-20230921100314122"></p>
+<p>看到设备内存由 bit[3:2] 决定，DEVICE_nGnRE 刚好是 01，所以最终值就是 0x0000<strong>01</strong>00</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211003979.png" srcset="/img/loading.gif" lazyload alt="image-20230921100350937"></p>
+<p>第 46 ~ 69 设置 TCR 相关，用于管理页表映射的（后续专门写）</p>
+<h2 id="使能-MMU"><a href="#使能-MMU" class="headerlink" title="使能 MMU"></a>使能 MMU</h2><p>下来该调用 <code>__primary_switch</code> 和 <code>__enable_mmu</code> 了，这两个函数也在 .idmap.text 段中</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs assembly">__primary_switch:<br>	adrp	x1, init_pg_dir<br>	bl	__enable_mmu<br>...<br>	ldr	x8, =__primary_switched<br>	adrp	x0, __PHYS_OFFSET<br>	br	x8<br>ENDPROC(__primary_switch)<br></code></pre></td></tr></table></figure>
+
+<p>第 2 行，将 内核映像 PGD 页表首地址 init_pg_dir 存入 X1</p>
+<p>第 3 行，调用 <code>__enable_mmu</code> 使能 MMU，这里有两个参数，第一个参数是在 <code>__cpu_setup</code> 中写入 X0 的 SCTRL_EL1，第二个参数为 init 页表的 PGD 首地址</p>
+<p>第 5 ~ 7 行，将 <code>__PHYS_OFFSET</code> 存入 x0，调用 __<code>primary_switched</code> 函数</p>
+<p>这里看 <code>__enable_mmu</code></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><code class="hljs assembly">/*<br> * Enable the MMU.<br> *<br> *  x0  = SCTLR_EL1 value for turning on the MMU.<br> *  x1  = TTBR1_EL1 value<br> *<br> * Returns to the caller via x30/lr. This requires the caller to be covered<br> * by the .idmap.text section.<br> *<br> * Checks if the selected granule size is supported by the CPU.<br> * If it isn&#x27;t, park the CPU<br> */<br>ENTRY(__enable_mmu)<br>	mrs	x2, ID_AA64MMFR0_EL1<br>	ubfx	x2, x2, #ID_AA64MMFR0_TGRAN_SHIFT, 4<br>	cmp	x2, #ID_AA64MMFR0_TGRAN_SUPPORTED<br>	b.ne	__no_granule_support<br>	update_early_cpu_boot_status 0, x2, x3<br>	adrp	x2, idmap_pg_dir<br>	phys_to_ttbr x1, x1<br>	phys_to_ttbr x2, x2<br>	msr	ttbr0_el1, x2			// load TTBR0<br>	offset_ttbr1 x1<br>	msr	ttbr1_el1, x1			// load TTBR1<br>	isb<br>	msr	sctlr_el1, x0<br>	isb<br>	/*<br>	 * Invalidate the local I-cache so that any instructions fetched<br>	 * speculatively from the PoC are discarded, since they may have<br>	 * been dynamically patched at the PoU.<br>	 */<br>	ic	iallu<br>	dsb	nsh<br>	isb<br>	ret<br>ENDPROC(__enable_mmu)<br></code></pre></td></tr></table></figure>
+
+<p>第 14 ~ 16 行，ID_AA64MMFR0_EL1 寄存器中保存着系统支持物理页面的粒度，如 4KB、16KB、64KB，读出来与内核配置的 CONFIG_ARM64_4K_PAGES 比较</p>
+<p>第 18 行，更新全局变量 update_early_cpu_boot_status 的值为 0</p>
+<p>第 19 行，加载恒等映射 PGD 页表 idmap_pg_dir 到 X2</p>
+<p>第 20 ~ 24 行，将恒等映射页表加载到 ttbr0_el1，开启 MMU 之后，在切换进程时 ttbr0_el1 会变成对应进程的 PGD 首地址，将 init 页表加载到 ttbr1_el1，内核态共享这个页表</p>
+<p>第 26 行，设置系统控制寄存器 SCTRL_EL1 的 M 域，使能 MMU</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211004547.png" srcset="/img/loading.gif" lazyload alt="image-20230921100414498"></p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309211009173.png" srcset="/img/loading.gif" lazyload alt="image-20230921100917126"></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div></div>
+      <div>http://example.com/2023/10/08/linux/kernel/memory/启动代码中的内存部分/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Gao Xiang</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年10月8日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/10/08/linux/kernel/memory/%E9%A1%B5%E8%A1%A8/" title="">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile"></span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div class="disqus" style="width:100%">
+    <div id="disqus_thread"></div>
+    
+      <script type="text/javascript">
+        var disqus_config = function() {
+          this.page.url = 'http://example.com/2023/10/08/linux/kernel/memory/%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%B8%AD%E7%9A%84%E5%86%85%E5%AD%98%E9%83%A8%E5%88%86/';
+          this.page.identifier = '/2023/10/08/linux/kernel/memory/%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%B8%AD%E7%9A%84%E5%86%85%E5%AD%98%E9%83%A8%E5%88%86/';
+        };
+        Fluid.utils.loadComments('#disqus_thread', function() {
+          var d = document, s = d.createElement('script');
+          s.src = '//' + 'fluid' + '.disqus.com/embed.js';
+          s.setAttribute('data-timestamp', new Date());
+          (d.head || d.body).appendChild(s);
+        });
+      </script>
+    
+    <noscript>Please enable JavaScript to view the comments</noscript>
+  </div>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

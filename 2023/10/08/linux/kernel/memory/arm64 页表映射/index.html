@@ -1,0 +1,951 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Gao Xiang">
+  <meta name="keywords" content="Linux">
+  
+    <meta name="description" content="arm64 页表映射">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Xiaoa&#39;s Blog">
+<meta property="og:url" content="http://example.com/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/index.html">
+<meta property="og:site_name" content="Xiaoa&#39;s Blog">
+<meta property="og:description" content="arm64 页表映射">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309212116358.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309212115515.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309221142941.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309221139949.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309221149785.png">
+<meta property="article:published_time" content="2023-10-08T10:50:46.447Z">
+<meta property="article:modified_time" content="2023-10-08T15:26:15.549Z">
+<meta property="article:author" content="Gao Xiang">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309212116358.png">
+  
+  
+  
+  <title>Xiaoa&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.5","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"left","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Linux</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/%E6%B1%BD%E8%BD%A6.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text=""></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-10-08 18:50" pubdate>
+          星期日, 十月 8日 2023, 6:50 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          131 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="padding-left: 2rem; margin-right: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header"></h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="arm64-页表映射"><a href="#arm64-页表映射" class="headerlink" title="arm64 页表映射"></a>arm64 页表映射</h1><span id="more"></span>
+<p>对于 ARM64 架构来说，目前基于 ARMv8-A 架构的处理器最大可以支持到 48 根地址线，也就是寻址 2^48 的虚拟地址空间，即虚拟地址空间范围为 0x0000000000000000～0x0000FFFFFFFFFFFF，共 256TB。其实完全可以做到 64 根地址线，那么最大就可以寻找到 2^64 的虚拟地址空间。但是对于目前的应用来说，256TB 的虚拟地址空间已经足够<br>使用了。因为如果支持 64 位虚拟地址空间，意味着处理器设计需要考虑更多的地址线，CPU 的设计复杂度会增大。<br>基于 ARMv8-A 架构的处理器的虚拟地址分成两个区域。分别是：</p>
+<ul>
+<li>0x0000000000000000 ~ 0x0000FFFFFFFFFFFF</li>
+<li>0xFFFF000000000000 ~ 0xFFFFFFFFFFFFFFFF</li>
+</ul>
+<p>我们可以通过配置 CONFIG_ARM64_VA_BITS 宏来设置虚拟地址的宽度 </p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs makefile">config ARM64_VA_BITS<br>	int<br>	default 36 if ARM64_VA_BITS_36<br>	default 39 if ARM64_VA_BITS_39<br>	default 42 if ARM64_VA_BITS_42<br>	default 47 if ARM64_VA_BITS_47<br>	default 48 if ARM64_VA_BITS_48 || ARM64_USER_VA_BITS_52<br></code></pre></td></tr></table></figure>
+
+<p>而物理地址最大支持也是 48 位</p>
+<p>Linux 内存空间布局与地址映射的粒度和地址映射的层级有关。处理器支持的页面大小有 4KB、 16KB、64KB，映射的层级可以是 3 级或者 4 级</p>
+<p>我的 qemu 的配置为</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs makefile">CONFIG_PGTABLE_LEVELS=4<br>CONFIG_ARM64_4K_PAGES=y<br>CONFIG_ARM64_VA_BITS_48=y<br>CONFIG_ARM64_VA_BITS=48<br>CONFIG_ARM64_PA_BITS_48=y<br>CONFIG_ARM64_PA_BITS=48<br></code></pre></td></tr></table></figure>
+
+<p>见 <code>Documentation/arm64/memory.txt</code></p>
+<p>该文档描述了 AArch64 Linux内核使用的虚拟内存布局。该体系结构允许最多 4 个级别的页表翻译，页面大小为4KB，以及最多 3 个级别的页表翻译，页面大小为 64 KB。</p>
+<p>AArch6 使用 3 级或 4 级页表和 4KB 页配置，分别为用户和内核提供 39位(512GB) 或 48位(256TB) 虚拟地址。对于 64KB 的页面，只使用 2 层页表，允许使用 42 位(4TB) 虚拟地址，但是内存布局是相同的。</p>
+<p>用户地址将 63:48 位设置为 0，而内核地址将相同的位设置为 1。TTBRx 选择由虚拟地址的第 63 位给出。<code>swapper_pg_dir</code> 只包含内核(全局)映射，而用户 PGD 只包含用户(非全局)映射。<code>swapper_pg_dir</code> 目录地址被写入到 TTBR1，而从未写入到 TTBR0，用户 PGD 页表首地址会写入 TTBR0</p>
+<p>页表为 4KB，3 级页表，地址为 39 位的内存分布图</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c">AArch64 Linux memory layout with <span class="hljs-number">4</span>KB pages + <span class="hljs-number">3</span> levels：<br><br>Start			End			Size		Use<br>-----------------------------------------------------------------------<br><span class="hljs-number">0000000000000000</span>	<span class="hljs-number">0000007f</span>ffffffff	 <span class="hljs-number">512</span>GB		user<br>ffffff8000000000	ffffffffffffffff	 <span class="hljs-number">512</span>GB		kernel<br></code></pre></td></tr></table></figure>
+
+<p>页表为 4KB，4 级页表，地址为 48 位的内存分布图</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c">AArch64 Linux memory layout with <span class="hljs-number">4</span>KB pages + <span class="hljs-number">4</span> levels:<br><br>Start			End			Size		Use<br>-----------------------------------------------------------------------<br><span class="hljs-number">0000000000000000</span>	<span class="hljs-number">0000f</span>fffffffffff	 <span class="hljs-number">256</span>TB		user<br>ffff000000000000	ffffffffffffffff	 <span class="hljs-number">256</span>TB		kernel<br></code></pre></td></tr></table></figure>
+
+<p>页表为 64KB，2 级页表，地址为 42 位的内存分布图</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c">AArch64 Linux memory layout with <span class="hljs-number">64</span>KB pages + <span class="hljs-number">2</span> levels:<br><br>Start			End			Size		Use<br>-----------------------------------------------------------------------<br><span class="hljs-number">0000000000000000</span>	<span class="hljs-number">000003f</span>fffffffff	   <span class="hljs-number">4</span>TB		user<br>fffffc0000000000	ffffffffffffffff	   <span class="hljs-number">4</span>TB		kernel<br></code></pre></td></tr></table></figure>
+
+<p>页表为 64KB，3 级页表，地址为 48 位的内存分布图<a id="内存分布图"></a></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c">AArch64 Linux memory layout with <span class="hljs-number">64</span>KB pages + <span class="hljs-number">3</span> levels:<br><br>Start			End			Size		Use<br>-----------------------------------------------------------------------<br><span class="hljs-number">0000000000000000</span>	<span class="hljs-number">0000f</span>fffffffffff	 <span class="hljs-number">256</span>TB		user<br>ffff000000000000	ffffffffffffffff	 <span class="hljs-number">256</span>TB		kernel<br></code></pre></td></tr></table></figure>
+
+<p>下面的页表查询过程对应的内存布局图是<a href="#内存分布图">这里</a></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c">Translation table lookup with <span class="hljs-number">64</span>KB pages:<br><br>+--------+--------+--------+--------+--------+--------+--------+--------+<br>|<span class="hljs-number">63</span>    <span class="hljs-number">56</span>|<span class="hljs-number">55</span>    <span class="hljs-number">48</span>|<span class="hljs-number">47</span>    <span class="hljs-number">40</span>|<span class="hljs-number">39</span>    <span class="hljs-number">32</span>|<span class="hljs-number">31</span>    <span class="hljs-number">24</span>|<span class="hljs-number">23</span>    <span class="hljs-number">16</span>|<span class="hljs-number">15</span>     <span class="hljs-number">8</span>|<span class="hljs-number">7</span>      <span class="hljs-number">0</span>|<br>+--------+--------+--------+--------+--------+--------+--------+--------+<br> |                 |    |               |              |<br> |                 |    |               |              v<br> |                 |    |               |            [<span class="hljs-number">15</span>:<span class="hljs-number">0</span>]  in-page offset<br> |                 |    |               +----------&gt; [<span class="hljs-number">28</span>:<span class="hljs-number">16</span>] L3 index<br> |                 |    +--------------------------&gt; [<span class="hljs-number">41</span>:<span class="hljs-number">29</span>] L2 index<br> |                 +-------------------------------&gt; [<span class="hljs-number">47</span>:<span class="hljs-number">42</span>] L1 index<br> +-------------------------------------------------&gt; [<span class="hljs-number">63</span>] TTBR0/<span class="hljs-number">1</span><br></code></pre></td></tr></table></figure>
+
+<p>下面的页表查询过程对应的内存布局图是[这里](#页表为 4KB，4 级页表，地址为 48 位的内存分布图)</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c">Translation table lookup with <span class="hljs-number">4</span>KB pages:<br><br>+--------+--------+--------+--------+--------+--------+--------+--------+<br>|<span class="hljs-number">63</span>    <span class="hljs-number">56</span>|<span class="hljs-number">55</span>    <span class="hljs-number">48</span>|<span class="hljs-number">47</span>    <span class="hljs-number">40</span>|<span class="hljs-number">39</span>    <span class="hljs-number">32</span>|<span class="hljs-number">31</span>    <span class="hljs-number">24</span>|<span class="hljs-number">23</span>    <span class="hljs-number">16</span>|<span class="hljs-number">15</span>     <span class="hljs-number">8</span>|<span class="hljs-number">7</span>      <span class="hljs-number">0</span>|<br>+--------+--------+--------+--------+--------+--------+--------+--------+<br> |                 |         |         |         |         |<br> |                 |         |         |         |         v<br> |                 |         |         |         |   [<span class="hljs-number">11</span>:<span class="hljs-number">0</span>]  in-page offset<br> |                 |         |         |         +-&gt; [<span class="hljs-number">20</span>:<span class="hljs-number">12</span>] L3 index<br> |                 |         |         +-----------&gt; [<span class="hljs-number">29</span>:<span class="hljs-number">21</span>] L2 index<br> |                 |         +---------------------&gt; [<span class="hljs-number">38</span>:<span class="hljs-number">30</span>] L1 index<br> |                 +-------------------------------&gt; [<span class="hljs-number">47</span>:<span class="hljs-number">39</span>] L0 index<br> +-------------------------------------------------&gt; [<span class="hljs-number">63</span>] TTBR0/<span class="hljs-number">1</span><br></code></pre></td></tr></table></figure>
+
+<p>我们目前使用的是这种，kernel 源码文档中没怎么对齐，可以看下面的图</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309212116358.png" srcset="/img/loading.gif" lazyload alt="image-20230921211640317"></p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309212115515.png" srcset="/img/loading.gif" lazyload alt="image-20230921211545326"></p>
+<ul>
+<li>如果虚拟地址最高位 bit[63]为 1，那么这个地址是用于内核空间的，页表的基地址寄存器用 TTBR1_EL1。如果 bit[63]等于 0，这个虚拟地址属于用户空间，页表基地址寄存器用 TTBR0。</li>
+<li>TTBRx 寄存器保存了第 0 级页表的基地址（ L0 Table base address， Linux 内核中称为 PGD），其中有 512 个页表项，以虚拟地址的 bit[47:39] 作为索引值在 L0 页表中查找相应的页表项。每个表项的内容含有下一级页表的物理基地址，即 L1 页表（ Linux 内核中称为 PUD）的基地址。</li>
+<li>PUD 页表中有 512 个页表项，以虚拟地址的 bit[38:30]为索引值在 PUD 表中查找相应的表项，每个表项的内容含有下一级页表的物理基地址，即 L2 页表（Linux 内核中称为 PMD）的基地址。</li>
+<li>PMD 页表中有 512 个表项，以虚拟地址的 bit[29:21]为索引值在 PMD 表中查找相应的表项，每个表项的内容含有下一级页表的物理基地址，即 L3 页表（ Linux 内核中称为 PTE）的基地址。</li>
+<li>在 PTE 页表中，以虚拟地址的 bit[20:12]为索引值在 PTE 表中查找相应的表项，每个 PTE 表项中含有最终的物理地址的 bit[47:12]，和虚拟地址中 bit[11:0]合并成最终的物理地址，完成地址翻译过程。</li>
+</ul>
+<p>在内核初始化阶段会 <code>__create_pgd_mapping</code> 对内核空间的页表进行一一映射（<code>arch/arm64/mm/mmu.c</code>）</p>
+<p><code>start_kenrel-&gt; setup_arch-&gt;paging_init-&gt;map_mem-&gt;__map_memblock-&gt;__create_pgd_mapping</code></p>
+<p>首先来看一下 <code>paging_init</code> 函数</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> __init <span class="hljs-title function_">paging_init</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-type">pgd_t</span> *pgdp = pgd_set_fixmap(__pa_symbol(swapper_pg_dir));<br>	map_kernel(pgdp);<br>	map_mem(pgdp);<br>	pgd_clear_fixmap();<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>map_kernel</code>：对内核映像文件的各段重新映射，之前在汇编中对齐做了块映射，现在要重新进行细粒度的页面映射了</p>
+<p><code>map_mem</code>: 对所有物理内存的线性映射，因为现在虚拟内核空间足够大，可以全部线性映射。物理内存会全部线性映射到 PAGE_OFFSET 开始的内核空间的虚拟地址，以加快内核访问内存（无需 mmu 查询多级页表）</p>
+<p>再调用 <code>__create_pgd_mapping</code> 函数之前需要获取内核 PGD 页表首地址。在内存线性映射完成之前是不能使用 <code>__pa()</code> 将虚拟地址线性转换成物理地址的</p>
+<p><code>swapper_pg_dir</code> 是内核 PGD 页表虚拟基地址，之前在汇编阶段也有一个内核 PGD 页表是 <code>init_pg_dir</code>，它只是做了简单的粗粒度的块映射，这次 <code>swapper_pg_dir</code> 是要做细粒度，如 4KB 的页表映射</p>
+<p>可查看 System.map</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">ffff000011be9000 T swapper_pg_dir<br></code></pre></td></tr></table></figure>
+
+<p><code>__pa_symbol()</code> 宏是将内核映射的虚拟地址线性转换为物理地址，而这里还没有将物理内存线性映射到内核空间，所以不能使用 <code>__pa()</code>，那 <code>__pa_symbol</code> 是怎么转换的呢？我们看下</p>
+<p><code>arch/arm64/include/asm/memory.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> __kimg_to_phys(addr)	((addr) - kimage_voffset)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> __pa_symbol_nodebug(x)	__kimg_to_phys((phys_addr_t)(x))</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> __phys_addr_symbol(x)	__pa_symbol_nodebug(x)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> __pa_symbol(x)		__phys_addr_symbol(RELOC_HIDE((unsigned long)(x), 0))</span><br></code></pre></td></tr></table></figure>
+
+<p>可以看到最终是也是通过一种线性映射的方式转换的，偏移量为 <code>kimage_voffset</code>，这个在哪里设置的呢？它是在初级阶段汇编函数 <code>__primary_switched</code> 中设置的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c">__primary_switched:<br>	...<br>	ldr_l	x4, kimage_vaddr		<span class="hljs-comment">// Save the offset between</span><br>	sub	x4, x4, x0			<span class="hljs-comment">// the kernel virtual and</span><br>	str_l	x4, kimage_voffset, x5		<span class="hljs-comment">// physical mappings</span><br></code></pre></td></tr></table></figure>
+
+<p><code>x4</code> 是 <code>kimage_vaddr</code>，一看就是内核映像虚拟基地址</p>
+<p><code>x0</code> 是在汇编函数 <code>__primary_switch</code> 中调用的时候传给 <code>__primary_switched</code> 的，值为 <code>__PHYS_OFFSET</code>，应该是内核映像物理基地址</p>
+<p><code>kimage_voffset</code> 就是内核映像虚拟基地址 - 内核映像物理基地址</p>
+<p>我们先看一下 <code>__PHYS_OFFSET</code> 是怎么得出的</p>
+<p><code>arch/arm64/kernel/head.S</code></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs assembly">#define __PHYS_OFFSET	(KERNEL_START - TEXT_OFFSET)<br><br>__primary_switch:<br>#ifdef CONFIG_RANDOMIZE_BASE<br>	ldr	x8, =__primary_switched<br>	adrp	x0, __PHYS_OFFSET<br>	blr	x8<br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/memory.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> KERNEL_START      _text</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/Makefile</code></p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs makefile">TEXT_OFFSET := 0x00080000<br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/kernel/vmlinux.lds.S</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c">. = KIMAGE_VADDR + TEXT_OFFSET;<br><br>.head.text : &#123;<br>	_text = .;<br>	HEAD_TEXT<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>从上面可以看出 <code>__PHYS_OFFSET</code> 最终等于 <code>KIMAGE_VADDR</code>，即内核映像虚拟基地址，为什么是虚拟的？</p>
+<p>前面确实已经开启了 MMU，而使用 <code>adrp</code> 指令获取到运行时地址确实就是虚拟地址，可我们这里需要的是物理地址呀，我们再仔细看上面写了 <code>.section &quot;.idmap.text&quot;,&quot;awx&quot;</code>，说明 <code>__primary_switch</code> 在恒等映射区，这里的虚拟地址等于物理地址，所以 <code>__PHYS_OFFSET</code> 就是内核映像的物理基地址了</p>
+<p>我们在看一下 <code>kimage_vaddr</code></p>
+<p><code>arch/arm64/kernel/head.S</code></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs assembly">ENTRY(kimage_vaddr)<br>	.quad		_text - TEXT_OFFSET<br>EXPORT_SYMBOL(kimage_vaddr)<br></code></pre></td></tr></table></figure>
+
+<p><code>kimage_vaddr</code> 就是 <code>KIMAGE_VADDR</code>，内核映像虚拟基地址</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * KIMAGE_VADDR - the virtual address of the start of the kernel image</span><br><span class="hljs-comment"> */</span><br>...	<br><span class="hljs-meta">#<span class="hljs-keyword">define</span> KIMAGE_VADDR		(MODULES_END)</span><br>...<br></code></pre></td></tr></table></figure>
+
+<p>像我的 qemu，<code>KIMAGE_VADDR</code> 就是 0xffff000010000000，在 vmalloc 区间</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309221142941.png" srcset="/img/loading.gif" lazyload alt="image-20230922114213903"></p>
+<p><code>kimage_voffset</code> 就是 0xfffeffffd0000000</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309221139949.png" srcset="/img/loading.gif" lazyload alt="image-20230922113937905"></p>
+<p>所以在物理内存全部线性映射到内核空间之前可以用 <code>__pa_symbol</code> 宏，如果以后就可以用宏 <code>__pa</code>，我们看一下它的实现</p>
+<p><code>arch/arm64/include/asm/memory.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> __is_lm_address(addr)	(!!((addr) &amp; BIT(VA_BITS - 1)))</span><br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> __lm_to_phys(addr)	(((addr) &amp; ~PAGE_OFFSET) + PHYS_OFFSET)</span><br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> __virt_to_phys_nodebug(x) (&#123;					\</span><br><span class="hljs-meta">	phys_addr_t __x = (phys_addr_t)(x);				\</span><br><span class="hljs-meta">	__is_lm_address(__x) ? __lm_to_phys(__x) :			\</span><br><span class="hljs-meta">			       __kimg_to_phys(__x);			\</span><br><span class="hljs-meta">&#125;)</span><br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> __virt_to_phys(x)	__virt_to_phys_nodebug(x)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> __pa(x)			__virt_to_phys((unsigned long)(x))</span><br><br></code></pre></td></tr></table></figure>
+
+<p>先调用 <code>__is_lm_address</code> 宏判断虚拟地址在哪个区域，如果线性映射区就调用 <code>__virt_to_phys</code>，否则就调用 <code>__kimg_to_phys</code></p>
+<p>看下面这幅图就可以很好理解了</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309221149785.png" srcset="/img/loading.gif" lazyload alt="image-20230922114949705"></p>
+<p>然后再调用 <code>pgd_set_fixmap</code> 函数将 fixmap 区间 <code>PGD_INDEX</code> 位置的虚拟地址和 <code>swapper_pg_dir</code> 临时建立映射关系，方便访问，后面就会调用 <code>pgd_clear_fixmap</code> 取消映射了</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> __create_pgd_mapping(<span class="hljs-type">pgd_t</span> *pgdir, <span class="hljs-type">phys_addr_t</span> phys,<br>				 <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> virt, <span class="hljs-type">phys_addr_t</span> size,<br>				 <span class="hljs-type">pgprot_t</span> prot,<br>				 <span class="hljs-type">phys_addr_t</span> (*pgtable_alloc)(<span class="hljs-type">void</span>),<br>				 <span class="hljs-type">int</span> flags)<br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> addr, length, end, next;<br>	<span class="hljs-type">pgd_t</span> *pgdp = pgd_offset_raw(pgdir, virt);<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * If the virtual and physical address don&#x27;t have the same offset</span><br><span class="hljs-comment">	 * within a page, we cannot map the region as the caller expects.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (WARN_ON((phys ^ virt) &amp; ~PAGE_MASK))<br>		<span class="hljs-keyword">return</span>;<br><br>	phys &amp;= PAGE_MASK;<br>	addr = virt &amp; PAGE_MASK;<br>	length = PAGE_ALIGN(size + (virt &amp; ~PAGE_MASK));<br><br>	end = addr + length;<br>	<span class="hljs-keyword">do</span> &#123;<br>		next = pgd_addr_end(addr, end);<br>		alloc_init_pud(pgdp, addr, next, phys, prot, pgtable_alloc,<br>			       flags);<br>		phys += next - addr;<br>	&#125; <span class="hljs-keyword">while</span> (pgdp++, addr = next, addr != end);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>后面的参数都是调用 <code>__map_memblock</code> 传入的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* map all the memory banks */</span><br>for_each_memblock(memory, reg) &#123;<br>	<span class="hljs-type">phys_addr_t</span> start = reg-&gt;base;<br>	<span class="hljs-type">phys_addr_t</span> end = start + reg-&gt;size;<br><br>	<span class="hljs-keyword">if</span> (start &gt;= end)<br>		<span class="hljs-keyword">break</span>;<br>	<span class="hljs-keyword">if</span> (memblock_is_nomap(reg))<br>		<span class="hljs-keyword">continue</span>;<br><br>	__map_memblock(pgdp, start, end, PAGE_KERNEL, flags);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> __init __map_memblock(<span class="hljs-type">pgd_t</span> *pgdp, <span class="hljs-type">phys_addr_t</span> start,<br>				  <span class="hljs-type">phys_addr_t</span> end, <span class="hljs-type">pgprot_t</span> prot, <span class="hljs-type">int</span> flags)<br>&#123;<br>	__create_pgd_mapping(pgdp, start, __phys_to_virt(start), end - start,<br>			     prot, early_pgtable_alloc, flags);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>我们统一列出所有参数</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>*pgdir</td>
+<td><code>swapper_pg_dir</code> 虚拟地址，内核空间 PGD 页表</td>
+</tr>
+<tr>
+<td>phys</td>
+<td>每个 memblock 区间的物理首地址</td>
+</tr>
+<tr>
+<td>virt</td>
+<td>每个 memblock 区间的虚拟首地址</td>
+</tr>
+<tr>
+<td>size</td>
+<td>每个 memblock 区间大小</td>
+</tr>
+<tr>
+<td>prot</td>
+<td>页面的属性</td>
+</tr>
+<tr>
+<td>(*pgtable_alloc)(void)</td>
+<td>分配页表内存函数 <code>early_pgtable_alloc</code></td>
+</tr>
+<tr>
+<td>flags</td>
+<td>相关标志，如 NO_CONT_MAPPINGS、NO_BLOCK_MAPPINGS</td>
+</tr>
+</tbody></table>
+<p>第 8 行，调用 <code>pgd_offset_raw</code> 得到 virt 在 pgd 页表中表项的位置</p>
+<p><code>arch/arm64/include/asm/memory.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> MAX_USER_VA_BITS	VA_BITS</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/pgtable-hwdef.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> ARM64_HW_PGTABLE_LEVEL_SHIFT(n)	((PAGE_SHIFT - 3) * (4 - (n)) + 3)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PGDIR_SHIFT		ARM64_HW_PGTABLE_LEVEL_SHIFT(4 - CONFIG_PGTABLE_LEVELS)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PTRS_PER_PGD		(1 &lt;&lt; (MAX_USER_VA_BITS - PGDIR_SHIFT))</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/pgtable.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> pgd_index(addr)		(((addr) &gt;&gt; PGDIR_SHIFT) &amp; (PTRS_PER_PGD - 1))</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> pgd_offset_raw(pgd, addr)	((pgd) + pgd_index(addr))</span><br></code></pre></td></tr></table></figure>
+
+<p>通过 <code>pgd_index</code> 可以得到 virt 在 pgd 页表中的偏移，再加上 pgd 页表虚拟首地址就是 virt 对应页表项的虚拟地址</p>
+<p>如页表大小为 4KB，即 PAGE_SHIFT &#x3D; 12，4 级页表，即 CONFIG_PGTABLE_LEVELS &#x3D; 4，则 PGDIR_SHIFT &#x3D; ((12 - 3) * (4 - 0) + 3) &#x3D; 39，如虚拟地址宽度 VA_BITS 为 48，PGD 的页表项个数 PTRS_PER_PGD 为 1 &lt;&lt; (48 - 39) &#x3D; 2^9 &#x3D; 512</p>
+<p>回到 <code>__create_pgd_mapping</code></p>
+<p>第 17 行，物理地址按页对齐</p>
+<p>第 18 行，虚拟地址也按也对齐</p>
+<p>因为映射是整页映射的，所以必须对齐</p>
+<p>第 19 行，计算出要映射的长度</p>
+<p>第 21 行，计算出所映像范围的结束虚拟地址</p>
+<p>第 22 ~ 27，以 <code>PGDIR_SIZE</code> 为步长遍历 [virt, virt+size] 内存区间，看这个区间需要多少个 PUD，然后就调用 <code>alloc_init_pud</code>()来分配 PUD 页表来填充对应的 PGD 页表项。</p>
+<p>看一下 <code>pgd_addr_end</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> pgd_addr_end(addr, end)						\</span><br><span class="hljs-meta">(&#123;	unsigned long __boundary = ((addr) + PGDIR_SIZE) &amp; PGDIR_MASK;	\</span><br><span class="hljs-meta">	(__boundary - 1 &lt; (end) - 1)? __boundary: (end);		\</span><br><span class="hljs-meta">&#125;)</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/pgtable-hwdef.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> PGDIR_SIZE		(_AC(1, UL) &lt;&lt; PGDIR_SHIFT)</span><br></code></pre></td></tr></table></figure>
+
+<p><code>PGDIR_SIZE</code> 表示一个 pgd 页表项可以映射的地址范围，还是上面的配置的话就是 2^39 &#x3D; 512 GB，<code>__boundary</code> 为下一个 pgd 页表项可以管理的地址范围的开始，如果 <code>__boundary</code> 大于 <code>end</code>，说明 1 个 pgd 页表项就够了，否则还得继续填充下一个 pgd 页表项</p>
+<p>看一下 <code>alloc_init_pud</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">alloc_init_pud</span><span class="hljs-params">(<span class="hljs-type">pgd_t</span> *pgdp, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> addr, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> end,</span><br><span class="hljs-params">			   <span class="hljs-type">phys_addr_t</span> phys, <span class="hljs-type">pgprot_t</span> prot,</span><br><span class="hljs-params">			   <span class="hljs-type">phys_addr_t</span> (*pgtable_alloc)(<span class="hljs-type">void</span>),</span><br><span class="hljs-params">			   <span class="hljs-type">int</span> flags)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> next;<br>	<span class="hljs-type">pud_t</span> *pudp;<br>	<span class="hljs-type">pgd_t</span> pgd = READ_ONCE(*pgdp);<br><br>	<span class="hljs-keyword">if</span> (pgd_none(pgd)) &#123;<br>		<span class="hljs-type">phys_addr_t</span> pud_phys;<br>		BUG_ON(!pgtable_alloc);<br>		pud_phys = pgtable_alloc();<br>		__pgd_populate(pgdp, pud_phys, PUD_TYPE_TABLE);<br>		pgd = READ_ONCE(*pgdp);<br>	&#125;<br>	BUG_ON(pgd_bad(pgd));<br><br>	pudp = pud_set_fixmap_offset(pgdp, addr);<br>	<span class="hljs-keyword">do</span> &#123;<br>		<span class="hljs-type">pud_t</span> old_pud = READ_ONCE(*pudp);<br><br>		next = pud_addr_end(addr, end);<br><br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * For 4K granule only, attempt to put down a 1GB block</span><br><span class="hljs-comment">		 */</span><br>		<span class="hljs-keyword">if</span> (use_1G_block(addr, next, phys) &amp;&amp;<br>		    (flags &amp; NO_BLOCK_MAPPINGS) == <span class="hljs-number">0</span>) &#123;<br>			pud_set_huge(pudp, phys, prot);<br><br>			<span class="hljs-comment">/*</span><br><span class="hljs-comment">			 * After the PUD entry has been populated once, we</span><br><span class="hljs-comment">			 * only allow updates to the permission attributes.</span><br><span class="hljs-comment">			 */</span><br>			BUG_ON(!pgattr_change_is_safe(pud_val(old_pud),<br>						      READ_ONCE(pud_val(*pudp))));<br>		&#125; <span class="hljs-keyword">else</span> &#123;<br>			alloc_init_cont_pmd(pudp, addr, next, phys, prot,<br>					    pgtable_alloc, flags);<br><br>			BUG_ON(pud_val(old_pud) != <span class="hljs-number">0</span> &amp;&amp;<br>			       pud_val(old_pud) != READ_ONCE(pud_val(*pudp)));<br>		&#125;<br>		phys += next - addr;<br>	&#125; <span class="hljs-keyword">while</span> (pudp++, addr = next, addr != end);<br><br>	pud_clear_fixmap();<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 8 行，拿出 pgd 页表项的值</p>
+<p>第 10 ~ 16 行，如果 pgd 页表项为空，就要分配一个新的页表</p>
+<p>第 19 行，使用 fixmap 段的 <code>FIX_PUD</code> 的虚拟地址映射 virt 在 pud 对应页表项的物理地址，主要是为了方便使用虚拟指针来访问，后面会调用 <code>pud_clear_fixmap</code> 来解除映射</p>
+<p>第 20 ~ 46 行，是以 <code>PUD_SIZE</code> 为步长来设置下一级的页表，和 pgd 一样，如果所要映射的地址范围大于 <code>PUD_SIZE</code>，就需要填充多个 pud 页表项</p>
+<p><code>include/asm-generic/pgtable.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> pud_addr_end(addr, end)						\</span><br><span class="hljs-meta">(&#123;	unsigned long __boundary = ((addr) + PUD_SIZE) &amp; PUD_MASK;	\</span><br><span class="hljs-meta">	(__boundary - 1 &lt; (end) - 1)? __boundary: (end);		\</span><br><span class="hljs-meta">&#125;)</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/pgtable-hwdef.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">if</span> CONFIG_PGTABLE_LEVELS &gt; 3</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PUD_SHIFT		ARM64_HW_PGTABLE_LEVEL_SHIFT(1)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PUD_SIZE		(_AC(1, UL) &lt;&lt; PUD_SHIFT)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PUD_MASK		(~(PUD_SIZE-1))</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PTRS_PER_PUD		PTRS_PER_PTE</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br></code></pre></td></tr></table></figure>
+
+<p><code>PUD_SHIFT</code> &#x3D; (12 - 3) * (4 - 1) + 3 &#x3D; 30，所以一个 pud 页表项 <code>PUD_SIZE</code> 可以管理 2^30 &#x3D; 1GB 大小内存</p>
+<p>第 28 行，<code>use_1G_block()</code> 函数会判断是否使用 1GB 大小的块映射？当这里要映射的大小内存块正好是 PUD_SIZE，那么只需要映射到 PUD 就好了</p>
+<p>看 <code>pud_set_huge</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">pud_set_huge</span><span class="hljs-params">(<span class="hljs-type">pud_t</span> *pudp, <span class="hljs-type">phys_addr_t</span> phys, <span class="hljs-type">pgprot_t</span> prot)</span><br>&#123;<br>	<span class="hljs-type">pgprot_t</span> sect_prot = __pgprot(PUD_TYPE_SECT |<br>					pgprot_val(mk_sect_prot(prot)));<br>	<span class="hljs-type">pud_t</span> new_pud = pfn_pud(__phys_to_pfn(phys), sect_prot);<br><br>	<span class="hljs-comment">/* Only allow permission changes for now */</span><br>	<span class="hljs-keyword">if</span> (!pgattr_change_is_safe(READ_ONCE(pud_val(*pudp)),<br>				   pud_val(new_pud)))<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br><br>	BUG_ON(phys &amp; ~PUD_MASK);<br>	set_pud(pudp, new_pud);<br>	<span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 5 行，将物理地址转为物理页帧号 pfn，然后和属性结合形成新的页表项值</p>
+<p>第 13 行，将页表项值设置 pud 对应的页表项中</p>
+<p>如果 <code>use_1G_block 函数判断不能通过 1GB 大小来映射， 那么就要调用  </code> alloc_init_cont_pmd 来进行下一级页表的映射了</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">alloc_init_cont_pmd</span><span class="hljs-params">(<span class="hljs-type">pud_t</span> *pudp, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> addr,</span><br><span class="hljs-params">				<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> end, <span class="hljs-type">phys_addr_t</span> phys,</span><br><span class="hljs-params">				<span class="hljs-type">pgprot_t</span> prot,</span><br><span class="hljs-params">				<span class="hljs-type">phys_addr_t</span> (*pgtable_alloc)(<span class="hljs-type">void</span>), <span class="hljs-type">int</span> flags)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> next;<br>	<span class="hljs-type">pud_t</span> pud = READ_ONCE(*pudp);<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Check for initial section mappings in the pgd/pud.</span><br><span class="hljs-comment">	 */</span><br>	BUG_ON(pud_sect(pud));<br>	<span class="hljs-keyword">if</span> (pud_none(pud)) &#123;<br>		<span class="hljs-type">phys_addr_t</span> pmd_phys;<br>		BUG_ON(!pgtable_alloc);<br>		pmd_phys = pgtable_alloc();<br>		__pud_populate(pudp, pmd_phys, PUD_TYPE_TABLE);<br>		pud = READ_ONCE(*pudp);<br>	&#125;<br>	BUG_ON(pud_bad(pud));<br><br>	<span class="hljs-keyword">do</span> &#123;<br>		<span class="hljs-type">pgprot_t</span> __prot = prot;<br><br>		next = pmd_cont_addr_end(addr, end);<br><br>		<span class="hljs-comment">/* use a contiguous mapping if the range is suitably aligned */</span><br>		<span class="hljs-keyword">if</span> ((((addr | next | phys) &amp; ~CONT_PMD_MASK) == <span class="hljs-number">0</span>) &amp;&amp;<br>		    (flags &amp; NO_CONT_MAPPINGS) == <span class="hljs-number">0</span>)<br>			__prot = __pgprot(pgprot_val(prot) | PTE_CONT);<br><br>		init_pmd(pudp, addr, next, phys, __prot, pgtable_alloc, flags);<br><br>		phys += next - addr;<br>	&#125; <span class="hljs-keyword">while</span> (addr = next, addr != end);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 7 行，得到 pud 页表项的值</p>
+<p>第 13 ~ 19 行，如果 pud 页表项的值为空，就分配一个新的 pmd 页表，然后设置它</p>
+<p>第 22 ~ 35 行，调用 <code>init_pmd</code> 来初始化 PT 和设置 PMD 页表项</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">init_pmd</span><span class="hljs-params">(<span class="hljs-type">pud_t</span> *pudp, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> addr, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> end,</span><br><span class="hljs-params">		     <span class="hljs-type">phys_addr_t</span> phys, <span class="hljs-type">pgprot_t</span> prot,</span><br><span class="hljs-params">		     <span class="hljs-type">phys_addr_t</span> (*pgtable_alloc)(<span class="hljs-type">void</span>), <span class="hljs-type">int</span> flags)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> next;<br>	<span class="hljs-type">pmd_t</span> *pmdp;<br><br>	pmdp = pmd_set_fixmap_offset(pudp, addr);<br>	<span class="hljs-keyword">do</span> &#123;<br>		<span class="hljs-type">pmd_t</span> old_pmd = READ_ONCE(*pmdp);<br><br>		next = pmd_addr_end(addr, end);<br><br>		<span class="hljs-comment">/* try section mapping first */</span><br>		<span class="hljs-keyword">if</span> (((addr | next | phys) &amp; ~SECTION_MASK) == <span class="hljs-number">0</span> &amp;&amp;<br>		    (flags &amp; NO_BLOCK_MAPPINGS) == <span class="hljs-number">0</span>) &#123;<br>			pmd_set_huge(pmdp, phys, prot);<br><br>			<span class="hljs-comment">/*</span><br><span class="hljs-comment">			 * After the PMD entry has been populated once, we</span><br><span class="hljs-comment">			 * only allow updates to the permission attributes.</span><br><span class="hljs-comment">			 */</span><br>			BUG_ON(!pgattr_change_is_safe(pmd_val(old_pmd),<br>						      READ_ONCE(pmd_val(*pmdp))));<br>		&#125; <span class="hljs-keyword">else</span> &#123;<br>			alloc_init_cont_pte(pmdp, addr, next, phys, prot,<br>					    pgtable_alloc, flags);<br><br>			BUG_ON(pmd_val(old_pmd) != <span class="hljs-number">0</span> &amp;&amp;<br>			       pmd_val(old_pmd) != READ_ONCE(pmd_val(*pmdp)));<br>		&#125;<br>		phys += next - addr;<br>	&#125; <span class="hljs-keyword">while</span> (pmdp++, addr = next, addr != end);<br><br>	pmd_clear_fixmap();<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这个主要做的是：</p>
+<ul>
+<li><p>以 <code>PMD_SIZE</code>(2^21 &#x3D; 2MB) 为步长，循环设置下一级页表</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> PMD_SHIFT		ARM64_HW_PGTABLE_LEVEL_SHIFT(2)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PMD_SIZE		(_AC(1, UL) &lt;&lt; PMD_SHIFT)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PMD_MASK		(~(PMD_SIZE-1))</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PTRS_PER_PMD		PTRS_PER_PTE</span><br></code></pre></td></tr></table></figure>
+</li>
+<li><p>如果起始虚拟地址、虚拟结束地址和物理起始地址与 <code>SECTION_MASK</code>(2MB) 对齐，那就是段映射，调用 <code>pmd_set_huge</code>，将物理地址和属性结合的新的页表项值直接设置到 pmd 表项中</p>
+</li>
+<li><p>如果不是段映射，那就要调用 <code>alloc_init_cont_pte</code> 来设置 PTE 页表</p>
+</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">alloc_init_cont_pte</span><span class="hljs-params">(<span class="hljs-type">pmd_t</span> *pmdp, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> addr,</span><br><span class="hljs-params">				<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> end, <span class="hljs-type">phys_addr_t</span> phys,</span><br><span class="hljs-params">				<span class="hljs-type">pgprot_t</span> prot,</span><br><span class="hljs-params">				<span class="hljs-type">phys_addr_t</span> (*pgtable_alloc)(<span class="hljs-type">void</span>),</span><br><span class="hljs-params">				<span class="hljs-type">int</span> flags)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> next;<br>	<span class="hljs-type">pmd_t</span> pmd = READ_ONCE(*pmdp);<br><br>	BUG_ON(pmd_sect(pmd));<br>	<span class="hljs-keyword">if</span> (pmd_none(pmd)) &#123;<br>		<span class="hljs-type">phys_addr_t</span> pte_phys;<br>		BUG_ON(!pgtable_alloc);<br>		pte_phys = pgtable_alloc();<br>		__pmd_populate(pmdp, pte_phys, PMD_TYPE_TABLE);<br>		pmd = READ_ONCE(*pmdp);<br>	&#125;<br>	BUG_ON(pmd_bad(pmd));<br><br>	<span class="hljs-keyword">do</span> &#123;<br>		<span class="hljs-type">pgprot_t</span> __prot = prot;<br><br>		next = pte_cont_addr_end(addr, end);<br><br>		<span class="hljs-comment">/* use a contiguous mapping if the range is suitably aligned */</span><br>		<span class="hljs-keyword">if</span> ((((addr | next | phys) &amp; ~CONT_PTE_MASK) == <span class="hljs-number">0</span>) &amp;&amp;<br>		    (flags &amp; NO_CONT_MAPPINGS) == <span class="hljs-number">0</span>)<br>			__prot = __pgprot(pgprot_val(prot) | PTE_CONT);<br><br>		init_pte(pmdp, addr, next, phys, __prot);<br><br>		phys += next - addr;<br>	&#125; <span class="hljs-keyword">while</span> (addr = next, addr != end);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>此函数主要做的事是：</p>
+<ul>
+<li>如果 pmd 页表项为空，就分配一个新的 pte 页表，然后调用 <code>__pmd_populate</code> 设置到 pmd 表项中，可以看到属性中有 <code>PMD_TYPE_TABLE</code>，表示是页的表项，而不是段的表项</li>
+<li><code>PTE_CONT</code> 连续页我们先不管</li>
+<li>以 <code>PAGE_SIZE</code>，如 4KB 为步长，调用 <code>init_pte</code> 循环设置 PTE</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">init_pte</span><span class="hljs-params">(<span class="hljs-type">pmd_t</span> *pmdp, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> addr, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> end,</span><br><span class="hljs-params">		     <span class="hljs-type">phys_addr_t</span> phys, <span class="hljs-type">pgprot_t</span> prot)</span><br>&#123;<br>	<span class="hljs-type">pte_t</span> *ptep;<br><br>	ptep = pte_set_fixmap_offset(pmdp, addr);<br>	<span class="hljs-keyword">do</span> &#123;<br>		<span class="hljs-type">pte_t</span> old_pte = READ_ONCE(*ptep);<br><br>		set_pte(ptep, pfn_pte(__phys_to_pfn(phys), prot));<br><br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * After the PTE entry has been populated once, we</span><br><span class="hljs-comment">		 * only allow updates to the permission attributes.</span><br><span class="hljs-comment">		 */</span><br>		BUG_ON(!pgattr_change_is_safe(pte_val(old_pte),<br>					      READ_ONCE(pte_val(*ptep))));<br><br>		phys += PAGE_SIZE;<br>	&#125; <span class="hljs-keyword">while</span> (ptep++, addr += PAGE_SIZE, addr != end);<br><br>	pte_clear_fixmap();<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这个函数主要做的事是：</p>
+<ul>
+<li>调用 <code>set_pte</code> 将物理地址和属性结合成新的页表项，然后设置到 pte 中</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div></div>
+      <div>http://example.com/2023/10/08/linux/kernel/memory/arm64 页表映射/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Gao Xiang</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年10月8日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/10/08/linux/kernel/other/DMA/dma_buf/" title="">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile"></span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/10/08/linux/kernel/memory/%E9%A1%B5%E8%A1%A8/" title="">
+                        <span class="hidden-mobile"></span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div class="disqus" style="width:100%">
+    <div id="disqus_thread"></div>
+    
+      <script type="text/javascript">
+        var disqus_config = function() {
+          this.page.url = 'http://example.com/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/';
+          this.page.identifier = '/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/';
+        };
+        Fluid.utils.loadComments('#disqus_thread', function() {
+          var d = document, s = d.createElement('script');
+          s.src = '//' + 'fluid' + '.disqus.com/embed.js';
+          s.setAttribute('data-timestamp', new Date());
+          (d.head || d.body).appendChild(s);
+        });
+      </script>
+    
+    <noscript>Please enable JavaScript to view the comments</noscript>
+  </div>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
