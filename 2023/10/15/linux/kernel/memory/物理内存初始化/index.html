@@ -1,0 +1,1094 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Gao Xiang">
+  <meta name="keywords" content="Linux">
+  
+    <meta name="description" content="物理内存初始化伙伴系统（buddy system）是操作系统常用的一种动态管理内存的方法。在用户提出申请时，分配一个大小合适的内存块给用户，并在用户释放后回收。在伙伴系统中，内存块的大小是 2 的 order 次幂个页面。内核中 order 的最大值用 MAX_ORDER 宏来表示。 123456&#x2F;* Free memory management - zoned buddy allocator.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="物理内存初始化">
+<meta property="og:url" content="http://example.com/2023/10/15/linux/kernel/memory/%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E5%88%9D%E5%A7%8B%E5%8C%96/index.html">
+<meta property="og:site_name" content="Xiaoa&#39;s Blog">
+<meta property="og:description" content="物理内存初始化伙伴系统（buddy system）是操作系统常用的一种动态管理内存的方法。在用户提出申请时，分配一个大小合适的内存块给用户，并在用户释放后回收。在伙伴系统中，内存块的大小是 2 的 order 次幂个页面。内核中 order 的最大值用 MAX_ORDER 宏来表示。 123456&#x2F;* Free memory management - zoned buddy allocator.">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310111621166.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310111706835.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310112059724.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310121148640.png">
+<meta property="article:published_time" content="2023-10-15T12:25:35.399Z">
+<meta property="article:modified_time" content="2023-10-15T14:40:40.085Z">
+<meta property="article:author" content="Gao Xiang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="内存">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310111621166.png">
+  
+  
+  
+  <title>物理内存初始化 - Xiaoa&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.5","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"left","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Linux</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/%E6%B2%99%E6%BC%A0.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="物理内存初始化"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-10-15 20:25" pubdate>
+          星期日, 十月 15日 2023, 8:25 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          31k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          256 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="padding-left: 2rem; margin-right: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">物理内存初始化</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="物理内存初始化"><a href="#物理内存初始化" class="headerlink" title="物理内存初始化"></a>物理内存初始化</h1><p>伙伴系统（buddy system）是操作系统常用的一种动态管理内存的方法。在用户提出申请时，分配一个大小合适的内存块给用户，并在用户释放后回收。在伙伴系统中，内存块的大小是 2 的 order 次幂个页面。内核中 order 的最大值用 <code>MAX_ORDER</code> 宏来表示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* Free memory management - zoned buddy allocator.  */</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifndef</span> CONFIG_FORCE_MAX_ZONEORDER</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MAX_ORDER 11</span><br><span class="hljs-meta">#<span class="hljs-keyword">else</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MAX_ORDER CONFIG_FORCE_MAX_ZONEORDER</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br></code></pre></td></tr></table></figure>
+
+<p>我的 qemu 的 <code>.config</code> 文件中配置了 <code>CONFIG_FORCE_MAX_ZONEORDER</code> &#x3D; 11，即<code>MAX_ORDER</code> &#x3D; 11</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">CONFIG_FORCE_MAX_ZONEORDER=<span class="hljs-number">11</span><br></code></pre></td></tr></table></figure>
+
+<p>也就是说把所有的空闲页面分组成 11 个内存块链表，每个内存块链表分别包括 1，2，4，8，16，…，1024 个页面。1024 个页面也就是 4MB 的连续物理内存。</p>
+<p>物理内存在内核中用几个 zone 来管理空闲页块。zone 根据内核的配置来划分，如 qemu 中有 <code>ZONE_DMA32</code> 和 <code>ZONE_NORMAL</code>。</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310111621166.png" srcset="/img/loading.gif" lazyload alt="image-20231011162102814"></p>
+<p>zone 结构中有一个 <code>free_area</code> 结构数组，大小为 <code>MAX_ORDER</code>。<code>free_area</code> 结构中还包含了一个 <code>MIGRATE_TYPES</code> 个链表。也就是 zone 中有 0 ~ (MAX_ORDER - 1) 个 <code>free_area</code>，每个 <code>free_area</code> 又有 <code>MIGRATE_TYPES</code> 个链表。</p>
+<p><code>include/linux/mmzone.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zone</span> &#123;</span><br>    ...<br>	<span class="hljs-comment">/* free areas of different sizes */</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">free_area</span>	<span class="hljs-title">free_area</span>[<span class="hljs-title">MAX_ORDER</span>];</span>	<br>    ...<br>&#125;;<br><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">free_area</span> &#123;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">list_head</span>	<span class="hljs-title">free_list</span>[<span class="hljs-title">MIGRATE_TYPES</span>];</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		nr_free;<br>&#125;;<br><br><span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">migratetype</span> &#123;</span><br>	MIGRATE_UNMOVABLE,<br>	MIGRATE_MOVABLE,<br>	MIGRATE_RECLAIMABLE,<br>	MIGRATE_PCPTYPES,	<span class="hljs-comment">/* the number of types on the pcp lists */</span><br>	MIGRATE_HIGHATOMIC = MIGRATE_PCPTYPES,<br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_CMA</span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * MIGRATE_CMA migration type is designed to mimic the way</span><br><span class="hljs-comment">	 * ZONE_MOVABLE works.  Only movable pages can be allocated</span><br><span class="hljs-comment">	 * from MIGRATE_CMA pageblocks and page allocator never</span><br><span class="hljs-comment">	 * implicitly change migration type of MIGRATE_CMA pageblock.</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * The way to use it is to change migratetype of a range of</span><br><span class="hljs-comment">	 * pageblocks to MIGRATE_CMA which can be done by</span><br><span class="hljs-comment">	 * __free_pageblock_cma() function.  What is important though</span><br><span class="hljs-comment">	 * is that a range of pageblocks must be aligned to</span><br><span class="hljs-comment">	 * MAX_ORDER_NR_PAGES should biggest page be bigger then</span><br><span class="hljs-comment">	 * a single pageblock.</span><br><span class="hljs-comment">	 */</span><br>	MIGRATE_CMA,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_MEMORY_ISOLATION</span><br>	MIGRATE_ISOLATE,	<span class="hljs-comment">/* can&#x27;t allocate from here */</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>	MIGRATE_TYPES<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>页面类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MIGRATE_UNMOVABLE</td>
+<td>不可迁移的页面，一般是内核态分配的页面，若迁移可能造成崩溃</td>
+</tr>
+<tr>
+<td>MIGRATE_MOVABLE</td>
+<td>可迁移的页面，一般是用户态分配的页面</td>
+</tr>
+<tr>
+<td>MIGRATE_RECLAIMABLE</td>
+<td>可回收的页面</td>
+</tr>
+<tr>
+<td>MIGRATE_PCPTYPES</td>
+<td>每个 CPU 的本地缓存页面</td>
+</tr>
+<tr>
+<td>MIGRATE_HIGHATOMIC</td>
+<td>大块页面，为了减缓外部碎片化</td>
+</tr>
+<tr>
+<td>MIGRATE_CMA</td>
+<td>连续物理页面，如相机、不支持 IOMMU 的 外设DMA 等</td>
+</tr>
+<tr>
+<td>MIGRATE_ISOLATE</td>
+<td>分离页面，比如在页面迁移的时候先将页面放到分离链表中，表示页面处于分离状态，不能被释放。并且不能从这个类型中分配内存。</td>
+</tr>
+</tbody></table>
+<p>页面分配的状态可以通过 <code>/proc/pagetypeinfo</code> 查看</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310111706835.png" srcset="/img/loading.gif" lazyload alt="image-20231011170632557"></p>
+<p>从图中可以看出：</p>
+<ul>
+<li>横着看，大部分页面类型都是 <code>MIGRATE_MOVABLE</code> 的</li>
+<li>竖着看：大部分页面在初始化的时候都放到了 order 为 10 的链表中</li>
+</ul>
+<h2 id="页块"><a href="#页块" class="headerlink" title="页块"></a>页块</h2><p>内存管理中有个页块的概念，一个页块一般为 2^(MAX_ORDER - 1) 个页面。</p>
+<p><code>include/linux/pageblock-flags.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> pageblock_order		(MAX_ORDER-1)</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> pageblock_nr_pages	(1UL &lt;&lt; pageblock_order)</span><br></code></pre></td></tr></table></figure>
+
+<p>每个页块都有一个对应的 MIGRATE_TYPES 类型。zone 结构中有一个成员指针 <code>pageblock_flags</code> 指向用于存放所有页块 MIGRATE_TYPES 类型的内存空间。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zone</span> &#123;</span><br>    ...<br>    <span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Flags for a pageblock_nr_pages block. See pageblock-flags.h.</span><br><span class="hljs-comment">	 * In SPARSEMEM, this map is stored in struct mem_section</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		*pageblock_flags;<br>    ...<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p><code>pageblock_flags</code> 指向的内存空间大小通过 <code>usemap_size</code> 来计算，每个页块用 4 位来存放类型。zone 的初始化函数 <code>free_area_init_core</code> 中会调用 <code>setup_usemap</code> 来计算和分配空间。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Calculate the size of the zone-&gt;blockflags rounded to an unsigned long</span><br><span class="hljs-comment"> * Start by making sure zonesize is a multiple of pageblock_order by rounding</span><br><span class="hljs-comment"> * up. Then use 1 NR_PAGEBLOCK_BITS worth of bits per pageblock, finally</span><br><span class="hljs-comment"> * round what is now in bits to nearest long in bits, then return it in</span><br><span class="hljs-comment"> * bytes.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> __init <span class="hljs-title function_">usemap_size</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> zone_start_pfn, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> zonesize)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> usemapsize;<br><br>	zonesize += zone_start_pfn &amp; (pageblock_nr_pages<span class="hljs-number">-1</span>);<br>	usemapsize = roundup(zonesize, pageblock_nr_pages);<br>	usemapsize = usemapsize &gt;&gt; pageblock_order;<br>	usemapsize *= NR_PAGEBLOCK_BITS;<br>	usemapsize = roundup(usemapsize, <span class="hljs-number">8</span> * <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>));<br><br>	<span class="hljs-keyword">return</span> usemapsize / <span class="hljs-number">8</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>roundup</code> 表示向上取整</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * roundup - round up to the next specified multiple</span><br><span class="hljs-comment"> * @x: the value to up</span><br><span class="hljs-comment"> * @y: multiple to round up to</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Rounds @x up to next multiple of @y. If @y will always be a power</span><br><span class="hljs-comment"> * of 2, consider using the faster round_up().</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * The `const&#x27; here prevents gcc-3.3 from calling __divdi3</span><br><span class="hljs-comment"> */</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> roundup(x, y) (					\</span><br><span class="hljs-meta">&#123;							\</span><br><span class="hljs-meta">	const typeof(y) __y = y;			\</span><br><span class="hljs-meta">	(((x) + (__y - 1)) / __y) * __y;		\</span><br><span class="hljs-meta">&#125;							\</span><br><span class="hljs-meta">)</span><br></code></pre></td></tr></table></figure>
+
+<ul>
+<li>如果 <code>zonesize</code> 大小为 0 ~ 1023 个页面，都用 1 个 pageblock 表示</li>
+<li>如果 <code>zonesize</code> 大小为 1023 ~ 2047 个页面，都用 2 个 pageblock 表示</li>
+</ul>
+<p>所以比如 <code>zonesize</code> &#x3D; 1025，那就用两个页块表示，每个页块用 <code>NR_PAGEBLOCK_BITS</code> 位表示 <code>MIGRATE_TYPES</code>  类型，所以就有 2 x 4 &#x3D; 8 位，然后再与 64 位 <code>roundup</code>，最终 <code>usemapsize</code> &#x3D; 64，这个函数需要返回字节数，所以再除以 8 就可以了。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> PB_migratetype_bits 3</span><br><span class="hljs-comment">/* Bit indices that affect a whole block of pages */</span><br><span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">pageblock_bits</span> &#123;</span><br>	PB_migrate,<br>	PB_migrate_end = PB_migrate + PB_migratetype_bits - <span class="hljs-number">1</span>,<br>			<span class="hljs-comment">/* 3 bits required for migrate types */</span><br>	PB_migrate_skip,<span class="hljs-comment">/* If set the block is skipped by compaction */</span><br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Assume the bits will always align on a word. If this assumption</span><br><span class="hljs-comment">	 * changes then get/set pageblock needs updating.</span><br><span class="hljs-comment">	 */</span><br>	NR_PAGEBLOCK_BITS<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>最后通过 <code>memblock_alloc_node_nopanic</code> 分配空间，并且让 <code>zone-&gt;pageblock_flags</code> 指向这个空间。</p>
+<p>内核用两个函数来管理这些迁移类型，分别是 <code>get_pageblock_migratetype</code> 和 <code>set_pageblock_migratetype</code></p>
+<p><code>mm/page_alloc.c</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">set_pageblock_migratetype</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> page *page, <span class="hljs-type">int</span> migratetype)</span><br>&#123;<br>	<span class="hljs-keyword">if</span> (unlikely(page_group_by_mobility_disabled &amp;&amp;<br>		     migratetype &lt; MIGRATE_PCPTYPES))<br>		migratetype = MIGRATE_UNMOVABLE;<br><br>	set_pageblock_flags_group(page, (<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>)migratetype,<br>					PB_migrate, PB_migrate_end);<br>&#125;<br><br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * set_pfnblock_flags_mask - Set the requested group of flags for a pageblock_nr_pages block of pages</span><br><span class="hljs-comment"> * @page: The page within the block of interest</span><br><span class="hljs-comment"> * @flags: The flags to set</span><br><span class="hljs-comment"> * @pfn: The target page frame number</span><br><span class="hljs-comment"> * @end_bitidx: The last bit of interest</span><br><span class="hljs-comment"> * @mask: mask of bits that the caller is interested in</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">void</span> <span class="hljs-title function_">set_pfnblock_flags_mask</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> page *page, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> flags,</span><br><span class="hljs-params">					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pfn,</span><br><span class="hljs-params">					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> end_bitidx,</span><br><span class="hljs-params">					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> mask)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> *bitmap;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> bitidx, word_bitidx;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> old_word, word;<br><br>	BUILD_BUG_ON(NR_PAGEBLOCK_BITS != <span class="hljs-number">4</span>);<br>	BUILD_BUG_ON(MIGRATE_TYPES &gt; (<span class="hljs-number">1</span> &lt;&lt; PB_migratetype_bits));<br><br>	bitmap = get_pageblock_bitmap(page, pfn);<br>	bitidx = pfn_to_bitidx(page, pfn);<br>	word_bitidx = bitidx / BITS_PER_LONG;<br>	bitidx &amp;= (BITS_PER_LONG<span class="hljs-number">-1</span>);<br><br>	VM_BUG_ON_PAGE(!zone_spans_pfn(page_zone(page), pfn), page);<br><br>	bitidx += end_bitidx;<br>	mask &lt;&lt;= (BITS_PER_LONG - bitidx - <span class="hljs-number">1</span>);<br>	flags &lt;&lt;= (BITS_PER_LONG - bitidx - <span class="hljs-number">1</span>);<br><br>	word = READ_ONCE(bitmap[word_bitidx]);<br>	<span class="hljs-keyword">for</span> (;;) &#123;<br>		old_word = cmpxchg(&amp;bitmap[word_bitidx], word, (word &amp; ~mask) | flags);<br>		<span class="hljs-keyword">if</span> (word == old_word)<br>			<span class="hljs-keyword">break</span>;<br>		word = old_word;<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>include/linux/pageblock-flags.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> set_pageblock_flags_group(page, flags, start_bitidx, end_bitidx) \</span><br><span class="hljs-meta">	set_pfnblock_flags_mask(page, flags, page_to_pfn(page),		\</span><br><span class="hljs-meta">			end_bitidx,					\</span><br><span class="hljs-meta">			(1 &lt;&lt; (end_bitidx - start_bitidx + 1)) - 1)</span><br></code></pre></td></tr></table></figure>
+
+<p>我们看 <code>set_pfnblock_flags_mask</code> 函数：</p>
+<p>参数 <code>flags</code> 为要设置的迁移类型</p>
+<p>参数 <code>end_bitidx</code> &#x3D; <code>PB_migrate_end</code> &#x3D; 2</p>
+<p>参数 <code>mask</code> &#x3D; (1 &lt;&lt; (<code>end_bitidx</code> - <code>start_bitidx</code> + 1)) - 1)</p>
+<p>​                       &#x3D; (1 &lt;&lt; (<code>PB_migrate_end</code> - <code>PB_migrate</code> + 1)) - 1)</p>
+<p>​                       &#x3D; (1 &lt;&lt; (2 - 0 + 1)) - 1)</p>
+<p>​                       &#x3D; 7</p>
+<p>第 31 行，获取这个 page 所在 zone 的页块指针，即 <code>zone-&gt;pageblock_flags</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* Return a pointer to the bitmap storing bits affecting a block of pages */</span><br><span class="hljs-type">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> *<span class="hljs-title function_">get_pageblock_bitmap</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> page *page,</span><br><span class="hljs-params">							<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pfn)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> page_zone(page)-&gt;pageblock_flags;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 32 行，先获取这个 page 所在的页块号，然后再得到这个页块在 <code>pageblock_flags</code> 中的索引（每 4 位为一个元素）</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-type">int</span> <span class="hljs-title function_">pfn_to_bitidx</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> page *page, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pfn)</span><br>&#123;<br>	pfn = pfn - round_down(page_zone(page)-&gt;zone_start_pfn, pageblock_nr_pages);<br>	<span class="hljs-keyword">return</span> (pfn &gt;&gt; pageblock_order) * NR_PAGEBLOCK_BITS;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 33 行，因为之前为 <code>pageblock_flags</code> 分配空间的时候返回的是 N 个字节，并且是向 64 位 word 取整，所以这里就是得到这个页块在第几个 word 中。</p>
+<p>第 34 行，获取 word 内页块偏移</p>
+<p>一个 word 可以容纳 16 个页块，比如这个 page 在第 17 个页块中，那么这个页块就在第 1 个 word（从 0 开始） 的第1 个页块中。因为 <code>bitidx</code> 从 1 开始算， 所以 <code>bitidx</code> &#x3D; 1，<code>word_bitidx</code> &#x3D; 0。</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310112059724.png" srcset="/img/loading.gif" lazyload alt="image-20231011205942680"></p>
+<p>第 38 行，<code>bitidx</code> &#x3D; 1 + 2 &#x3D; 3。</p>
+<p>第 39 行，<code>mask</code> 左移 (<code>BITS_PER_LONG</code> - <code>bitidx</code> - 1) &#x3D; 60 位。</p>
+<p>第 40 行，<code>flags</code> 也左移 60 位。</p>
+<p>第 42 行，把旧的 word 值读出来。</p>
+<p>第 44 行，生成新的 word 值并设置，将旧 word 中 bit[63:60] 清零，并且或上新的迁移类型标志 <code>flags</code>，bit[63:60] 刚好就是第 1 个 word 的第 1 个页块。</p>
+<p><code>get_pageblock_migratetype</code> 和 <code>set_pageblock_migratetype</code> 基本一样，就是反方向获取。</p>
+<p><code>include/linux/mmzone.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> get_pageblock_migratetype(page)					\</span><br><span class="hljs-meta">	get_pfnblock_flags_mask(page, page_to_pfn(page),		\</span><br><span class="hljs-meta">			PB_migrate_end, MIGRATETYPE_MASK)</span><br></code></pre></td></tr></table></figure>
+
+<p><code>mm/page_alloc.c</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> <span class="hljs-title function_">get_pfnblock_flags_mask</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> page *page, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pfn,</span><br><span class="hljs-params">					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> end_bitidx,</span><br><span class="hljs-params">					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> mask)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> __get_pfnblock_flags_mask(page, pfn, end_bitidx, mask);<br>&#125;<br><br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * get_pfnblock_flags_mask - Return the requested group of flags for the pageblock_nr_pages block of pages</span><br><span class="hljs-comment"> * @page: The page within the block of interest</span><br><span class="hljs-comment"> * @pfn: The target page frame number</span><br><span class="hljs-comment"> * @end_bitidx: The last bit of interest to retrieve</span><br><span class="hljs-comment"> * @mask: mask of bits that the caller is interested in</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Return: pageblock_bits flags</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> __always_inline <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> __get_pfnblock_flags_mask(<span class="hljs-keyword">struct</span> page *page,<br>					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pfn,<br>					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> end_bitidx,<br>					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> mask)<br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> *bitmap;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> bitidx, word_bitidx;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> word;<br><br>	bitmap = get_pageblock_bitmap(page, pfn);<br>	bitidx = pfn_to_bitidx(page, pfn);<br>	word_bitidx = bitidx / BITS_PER_LONG;<br>	bitidx &amp;= (BITS_PER_LONG<span class="hljs-number">-1</span>);<br><br>	word = bitmap[word_bitidx];<br>	bitidx += end_bitidx;<br>	<span class="hljs-keyword">return</span> (word &gt;&gt; (BITS_PER_LONG - bitidx - <span class="hljs-number">1</span>)) &amp; mask;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>初始化的时候在哪里设置页块的迁移类型呢？我们先简单看一下调用路径</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c">free_area_init_core<br>	memmap_init<br>    	memmap_init_zone<br>    		<span class="hljs-title function_">set_pageblock_migratetype</span><span class="hljs-params">(page, MIGRATE_MOVABLE)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>可以看到初始化的时候所有页面的迁移类型都设置成了 <code>MIGRATE_MOVABLE</code>。</p>
+<h2 id="zone-初始化"><a href="#zone-初始化" class="headerlink" title="zone 初始化"></a>zone 初始化</h2><p>初始化完页表之后，内核就可以对内存进行管理了。但是内核并不是统一对待这些页面，而是采用内存管理区来管理。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zone</span> &#123;</span><br>	<span class="hljs-comment">/* Read-mostly fields */</span><br><br>	<span class="hljs-comment">/* zone watermarks, access with *_wmark_pages(zone) macros */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> _watermark[NR_WMARK];<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> watermark_boost;<br><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> nr_reserved_highatomic;<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * We don&#x27;t know if the memory that we&#x27;re going to allocate will be</span><br><span class="hljs-comment">	 * freeable or/and it will be released eventually, so to avoid totally</span><br><span class="hljs-comment">	 * wasting several GB of ram we must reserve some of the lower zone</span><br><span class="hljs-comment">	 * memory (otherwise we risk to run OOM on the lower zones despite</span><br><span class="hljs-comment">	 * there being tons of freeable ram on the higher zones).  This array is</span><br><span class="hljs-comment">	 * recalculated at runtime if the sysctl_lowmem_reserve_ratio sysctl</span><br><span class="hljs-comment">	 * changes.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-type">long</span> lowmem_reserve[MAX_NR_ZONES];<br><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_NUMA</span><br>	<span class="hljs-type">int</span> node;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pglist_data</span>	*<span class="hljs-title">zone_pgdat</span>;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">per_cpu_pageset</span> __<span class="hljs-title">percpu</span> *<span class="hljs-title">pageset</span>;</span><br><br><span class="hljs-meta">#<span class="hljs-keyword">ifndef</span> CONFIG_SPARSEMEM</span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Flags for a pageblock_nr_pages block. See pageblock-flags.h.</span><br><span class="hljs-comment">	 * In SPARSEMEM, this map is stored in struct mem_section</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		*pageblock_flags;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span> <span class="hljs-comment">/* CONFIG_SPARSEMEM */</span></span><br><br>	<span class="hljs-comment">/* zone_start_pfn == zone_start_paddr &gt;&gt; PAGE_SHIFT */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		zone_start_pfn;<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * spanned_pages is the total pages spanned by the zone, including</span><br><span class="hljs-comment">	 * holes, which is calculated as:</span><br><span class="hljs-comment">	 * 	spanned_pages = zone_end_pfn - zone_start_pfn;</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * present_pages is physical pages existing within the zone, which</span><br><span class="hljs-comment">	 * is calculated as:</span><br><span class="hljs-comment">	 *	present_pages = spanned_pages - absent_pages(pages in holes);</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * managed_pages is present pages managed by the buddy system, which</span><br><span class="hljs-comment">	 * is calculated as (reserved_pages includes pages allocated by the</span><br><span class="hljs-comment">	 * bootmem allocator):</span><br><span class="hljs-comment">	 *	managed_pages = present_pages - reserved_pages;</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * So present_pages may be used by memory hotplug or memory power</span><br><span class="hljs-comment">	 * management logic to figure out unmanaged pages by checking</span><br><span class="hljs-comment">	 * (present_pages - managed_pages). And managed_pages should be used</span><br><span class="hljs-comment">	 * by page allocator and vm scanner to calculate all kinds of watermarks</span><br><span class="hljs-comment">	 * and thresholds.</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * Locking rules:</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * zone_start_pfn and spanned_pages are protected by span_seqlock.</span><br><span class="hljs-comment">	 * It is a seqlock because it has to be read outside of zone-&gt;lock,</span><br><span class="hljs-comment">	 * and it is done in the main allocator path.  But, it is written</span><br><span class="hljs-comment">	 * quite infrequently.</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * The span_seq lock is declared along with zone-&gt;lock because it is</span><br><span class="hljs-comment">	 * frequently read in proximity to zone-&gt;lock.  It&#x27;s good to</span><br><span class="hljs-comment">	 * give them a chance of being in the same cacheline.</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * Write access to present_pages at runtime should be protected by</span><br><span class="hljs-comment">	 * mem_hotplug_begin/end(). Any reader who can&#x27;t tolerant drift of</span><br><span class="hljs-comment">	 * present_pages should get_online_mems() to get a stable value.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-type">atomic_long_t</span>		managed_pages;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		spanned_pages;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		present_pages;<br><br>	<span class="hljs-type">const</span> <span class="hljs-type">char</span>		*name;<br><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_MEMORY_ISOLATION</span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Number of isolated pageblock. It is used to solve incorrect</span><br><span class="hljs-comment">	 * freepage counting problem due to racy retrieving migratetype</span><br><span class="hljs-comment">	 * of pageblock. Protected by zone-&gt;lock.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		nr_isolate_pageblock;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_MEMORY_HOTPLUG</span><br>	<span class="hljs-comment">/* see spanned/present_pages for more description */</span><br>	<span class="hljs-type">seqlock_t</span>		span_seqlock;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br>	<span class="hljs-type">int</span> initialized;<br><br>	<span class="hljs-comment">/* Write-intensive fields used from the page allocator */</span><br>	ZONE_PADDING(_pad1_)<br><br>	<span class="hljs-comment">/* free areas of different sizes */</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">free_area</span>	<span class="hljs-title">free_area</span>[<span class="hljs-title">MAX_ORDER</span>];</span><br><br>	<span class="hljs-comment">/* zone flags, see below */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		flags;<br><br>	<span class="hljs-comment">/* Primarily protects free_area */</span><br>	<span class="hljs-type">spinlock_t</span>		lock;<br><br>	<span class="hljs-comment">/* Write-intensive fields used by compaction and vmstats. */</span><br>	ZONE_PADDING(_pad2_)<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * When free pages are below this point, additional steps are taken</span><br><span class="hljs-comment">	 * when reading the number of free pages to avoid per-cpu counter</span><br><span class="hljs-comment">	 * drift allowing watermarks to be breached</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> percpu_drift_mark;<br><br><span class="hljs-meta">#<span class="hljs-keyword">if</span> defined CONFIG_COMPACTION || defined CONFIG_CMA</span><br>	<span class="hljs-comment">/* pfn where compaction free scanner should start */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		compact_cached_free_pfn;<br>	<span class="hljs-comment">/* pfn where async and sync compaction migration scanner should start */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>		compact_cached_migrate_pfn[<span class="hljs-number">2</span>];<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_COMPACTION</span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * On compaction failure, 1&lt;&lt;compact_defer_shift compactions</span><br><span class="hljs-comment">	 * are skipped before trying again. The number attempted since</span><br><span class="hljs-comment">	 * last failure is tracked with compact_considered.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span>		compact_considered;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span>		compact_defer_shift;<br>	<span class="hljs-type">int</span>			compact_order_failed;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br><span class="hljs-meta">#<span class="hljs-keyword">if</span> defined CONFIG_COMPACTION || defined CONFIG_CMA</span><br>	<span class="hljs-comment">/* Set to true when the PG_migrate_skip bits should be cleared */</span><br>	<span class="hljs-type">bool</span>			compact_blockskip_flush;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br>	<span class="hljs-type">bool</span>			contiguous;<br><br>	ZONE_PADDING(_pad3_)<br>	<span class="hljs-comment">/* Zone statistics */</span><br>	<span class="hljs-type">atomic_long_t</span>		vm_stat[NR_VM_ZONE_STAT_ITEMS];<br>	<span class="hljs-type">atomic_long_t</span>		vm_numa_stat[NR_VM_NUMA_STAT_ITEMS];<br>&#125; ____cacheline_internodealigned_in_smp;<br></code></pre></td></tr></table></figure>
+
+<p>zone 经常被访问到，因此这个数据结构要求以 L1 高速缓存对齐。可以看到 ARM64 的 L1 缓存行大小为 2^6 &#x3D; 64 字节。</p>
+<p><code>include/linux/cache.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> INTERNODE_CACHE_SHIFT L1_CACHE_SHIFT</span><br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> ____cacheline_internodealigned_in_smp \</span><br><span class="hljs-meta">	__attribute__((__aligned__(1 &lt;&lt; (INTERNODE_CACHE_SHIFT))))</span><br></code></pre></td></tr></table></figure>
+
+<p><code>arch/arm64/include/asm/cache.h</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> L1_CACHE_SHIFT		(6)</span><br></code></pre></td></tr></table></figure>
+
+<p>这里 <code>ZONE_PADDING()</code> 让 <code>zone-&gt;lock</code> 和 <code>zone-&gt;lru_lock</code> 两个被频繁访问的锁分别在两个不同的高速缓存行中，避免造成高速缓存伪共享问题。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zone_padding</span> &#123;</span><br>	<span class="hljs-type">char</span> x[<span class="hljs-number">0</span>];<br>&#125; ____cacheline_internodealigned_in_smp;<br><span class="hljs-meta">#<span class="hljs-keyword">define</span> ZONE_PADDING(name)	struct zone_padding name;</span><br></code></pre></td></tr></table></figure>
+
+<p>可以看出 <code>ZONE_PADDING</code> 本身就是按 L1 高速缓存行对齐的。</p>
+<p>一个内存节点最多有几个 zone，所以 zone 数据结构不需要像 page 结构一样关注其大小，所以 <code>ZONE_PADDING</code> 是为了性能而浪费一点空间。在内存管理开发过程中，<code>zone-&gt;lock</code> 和 <code>zone-&gt;lru_lock</code> 有时需要同时获取，所以让它们位于不同的高速缓存行是内核开发常用的一种优化技巧。在 Linux 5.0 内核后，<code>zone-&gt;lru_lock</code> 已经转移到了 <code>pglist_data</code> 数据结构中。</p>
+<p>我们解释下常用数据结构：</p>
+<table>
+<thead>
+<tr>
+<th>成员</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>_watermark</td>
+<td>每个 zone 在系统启动时会计算出 3 个水位<br />最低警戒水位（WMARK_MIN）<br />低水位（WMARK_LOW）<br />高水位（WMARK_HIGH）<br />这些在页面分配和回收时会用到</td>
+</tr>
+<tr>
+<td>watermark_boost</td>
+<td>用于临时提高水位线<br />1. 临时提高低水位，可以提前唤醒 kswapd 开始回收页面<br />2. 临时提高高水位，可以多回收一些页面才能达到平衡，休眠 kswapd</td>
+</tr>
+<tr>
+<td>nr_reserved_highatomic</td>
+<td>？</td>
+</tr>
+<tr>
+<td>lowmem_reserve</td>
+<td>防止过度分配低端 zone 的内存而预留的空间</td>
+</tr>
+<tr>
+<td>zone_pgdat</td>
+<td>指向内存节点，表示这个 zone 属于哪个节点</td>
+</tr>
+<tr>
+<td>pageset</td>
+<td>为每个 CPU 维护一些页面，以减少自旋锁的争用</td>
+</tr>
+<tr>
+<td>pageblock_flags</td>
+<td>记录每个页块的属性？</td>
+</tr>
+<tr>
+<td>zone_start_pfn</td>
+<td>zone 的起始页帧号</td>
+</tr>
+<tr>
+<td>spanned_pages</td>
+<td>zone 包含的总页面，不存在的空洞也计算在内<br />spanned_pages &#x3D; zone_end_pfn - zone_start_pfn;</td>
+</tr>
+<tr>
+<td>present_pages</td>
+<td>zone 包含的存在的物理页面，去掉了不存在空洞内存<br />present_pages &#x3D; spanned_pages - absent_pages(pages in holes);</td>
+</tr>
+<tr>
+<td>managed_pages</td>
+<td>zone 中被伙伴系统管理的页面数量，不包含预留内存<br />managed_pages &#x3D; present_pages - reserved_pages;</td>
+</tr>
+<tr>
+<td>name</td>
+<td>zone 的名字</td>
+</tr>
+<tr>
+<td>initialized</td>
+<td>表示 zone 是否初始化</td>
+</tr>
+<tr>
+<td>free_area</td>
+<td>管理空闲页块链表的数组，核心数据结构</td>
+</tr>
+<tr>
+<td>flags</td>
+<td>zone 的标志位，如<br />ZONE_BOOSTED_WATERMARK</td>
+</tr>
+<tr>
+<td>lock</td>
+<td>并行访问时用于保护 zone 的自旋锁</td>
+</tr>
+<tr>
+<td>percpu_drift_mark</td>
+<td>当空闲页面低于此值时，才会更精确地读取空闲页面值</td>
+</tr>
+<tr>
+<td>contiguous</td>
+<td>表示这个 zone 是否是连续的物理页面，即是否有空洞</td>
+</tr>
+<tr>
+<td>vm_stat</td>
+<td>zone 中不同类型页面的计数值</td>
+</tr>
+<tr>
+<td>vm_numa_stat</td>
+<td>NUMA 架构下 zone 中不同类型页面的计数值</td>
+</tr>
+</tbody></table>
+<p>通常情况下，内核的 zone 分为 <code>ZONE_DMA</code>、<code>ZONE_DMA32</code>、<code>ZONE_NORMAL</code>、<code>ZONE_HIGHMEM</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">zone_type</span> &#123;</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_ZONE_DMA</span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * ZONE_DMA is used when there are devices that are not able</span><br><span class="hljs-comment">	 * to do DMA to all of addressable memory (ZONE_NORMAL). Then we</span><br><span class="hljs-comment">	 * carve out the portion of memory that is needed for these devices.</span><br><span class="hljs-comment">	 * The range is arch specific.</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * Some examples</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * Architecture		Limit</span><br><span class="hljs-comment">	 * ---------------------------</span><br><span class="hljs-comment">	 * parisc, ia64, sparc	&lt;4G</span><br><span class="hljs-comment">	 * s390, powerpc	&lt;2G</span><br><span class="hljs-comment">	 * arm			Various</span><br><span class="hljs-comment">	 * alpha		Unlimited or 0-16MB.</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * i386, x86_64 and multiple other arches</span><br><span class="hljs-comment">	 * 			&lt;16M.</span><br><span class="hljs-comment">	 */</span><br>	ZONE_DMA,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_ZONE_DMA32</span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * x86_64 needs two ZONE_DMAs because it supports devices that are</span><br><span class="hljs-comment">	 * only able to do DMA to the lower 16M but also 32 bit devices that</span><br><span class="hljs-comment">	 * can only do DMA areas below 4G.</span><br><span class="hljs-comment">	 */</span><br>	ZONE_DMA32,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Normal addressable memory is in ZONE_NORMAL. DMA operations can be</span><br><span class="hljs-comment">	 * performed on pages in ZONE_NORMAL if the DMA devices support</span><br><span class="hljs-comment">	 * transfers to all addressable memory.</span><br><span class="hljs-comment">	 */</span><br>	ZONE_NORMAL,<br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_HIGHMEM</span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * A memory area that is only addressable by the kernel through</span><br><span class="hljs-comment">	 * mapping portions into its own address space. This is for example</span><br><span class="hljs-comment">	 * used by i386 to allow the kernel to address the memory beyond</span><br><span class="hljs-comment">	 * 900MB. The kernel will set up special mappings (page</span><br><span class="hljs-comment">	 * table entries on i386) for each page that the kernel needs to</span><br><span class="hljs-comment">	 * access.</span><br><span class="hljs-comment">	 */</span><br>	ZONE_HIGHMEM,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>	ZONE_MOVABLE,<br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_ZONE_DEVICE</span><br>	ZONE_DEVICE,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>	__MAX_NR_ZONES<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>我的 qemu 中只配置了 <code>CONFIG_ZONE_DMA32</code>，所以只有 <code>CONFIG_ZONE_DMA32</code> 和 <code>ZONE_NORMAL</code> 两个 zone。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">zone_type</span> &#123;</span><br>	ZONE_DMA32,<br>	ZONE_NORMAL,<br>	ZONE_MOVABLE,<br>	__MAX_NR_ZONES<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p><code>ZONE_DMA32</code> 的大小定义在 <code>zone_sizes_init</code> 中，一般不会超过 4GB。</p>
+<figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs applescript">/*<br> * x86_64 needs two ZONE_DMAs because <span class="hljs-keyword">it</span> supports devices <span class="hljs-keyword">that</span> are<br> * only able <span class="hljs-keyword">to</span> do DMA <span class="hljs-keyword">to</span> <span class="hljs-keyword">the</span> lower <span class="hljs-number">16</span>M <span class="hljs-keyword">but</span> also <span class="hljs-number">32</span> bit devices <span class="hljs-keyword">that</span><br> * can only do DMA areas <span class="hljs-keyword">below</span> <span class="hljs-number">4</span>G.<br> */<br>ZONE_DMA32,<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> __init <span class="hljs-title function_">zone_sizes_init</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> min, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> max)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> max_zone_pfns[MAX_NR_ZONES]  = &#123;<span class="hljs-number">0</span>&#125;;<br><br>	<span class="hljs-keyword">if</span> (IS_ENABLED(CONFIG_ZONE_DMA32))<br>		max_zone_pfns[ZONE_DMA32] = PFN_DOWN(max_zone_dma_phys());<br>	max_zone_pfns[ZONE_NORMAL] = max;<br><br>	free_area_init_nodes(max_zone_pfns);<br>&#125;<br><br><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Return the maximum physical address for ZONE_DMA32 (DMA_BIT_MASK(32)). It</span><br><span class="hljs-comment"> * currently assumes that for memory starting above 4G, 32-bit devices will</span><br><span class="hljs-comment"> * use a DMA offset.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">phys_addr_t</span> __init <span class="hljs-title function_">max_zone_dma_phys</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-type">phys_addr_t</span> offset = memblock_start_of_DRAM() &amp; GENMASK_ULL(<span class="hljs-number">63</span>, <span class="hljs-number">32</span>);<br>	<span class="hljs-keyword">return</span> min(offset + (<span class="hljs-number">1ULL</span> &lt;&lt; <span class="hljs-number">32</span>), memblock_end_of_DRAM());<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>ZONE_DMA32</code> 管理区的最大物理地址由 <code>max_zone_dma_phys</code> 得出。其中 <code>GENMASK_ULL</code> 表示第 32 ~ 64 位都是 1，其余位都是 0。有几种情况：</p>
+<ul>
+<li>memblock 起始地址和结束地址都小于 4GB，就取 memblock 的结束地址</li>
+<li>memblock 起始地址小于 4GB，结束地址大于 4GB，就取 4GB</li>
+<li>memblock 起始地址和结束地址都大于 4GB，就取 <code>offset</code> + 4GB</li>
+</ul>
+<p>从前两种情况下，<code>ZONE_DMA32</code> 管理区物理地址最大值不能超过 4GB。</p>
+<p>而第三种情况，<code>offset</code> 为 0 ~ 1023 时，通过 <code>PFN_DOWN</code> 宏返回的也是和 4GB 对应的 pfn 一样。只有 <code>offset</code> 大于 1023 时，才会超过 4GB 对应的 pfn，而这是 memblock 起始地址已经 4TB 的位置了，非常大了，几乎有这种配置。</p>
+<p>我们看一下 qemu 的 zone 的信息：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] Zone ranges:<br>[    <span class="hljs-number">0.000000</span>]   DMA32    [mem <span class="hljs-number">0x0000000040000000</span><span class="hljs-number">-0x000000007fffffff</span>]<br>[    <span class="hljs-number">0.000000</span>]   Normal   empty<br></code></pre></td></tr></table></figure>
+
+<p>zone 的初始化是在 <code>free_area_init_nodes</code> 中进行的。开机 log 中也有相关信息：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] On node <span class="hljs-number">0</span> totalpages: <span class="hljs-number">262144</span><br>[    <span class="hljs-number">0.000000</span>]   DMA32 zone: <span class="hljs-number">4096</span> pages used <span class="hljs-keyword">for</span> memmap<br>[    <span class="hljs-number">0.000000</span>]   DMA32 zone: <span class="hljs-number">0</span> pages reserved<br>[    <span class="hljs-number">0.000000</span>]   DMA32 zone: <span class="hljs-number">262144</span> pages, LIFO batch:<span class="hljs-number">63</span><br></code></pre></td></tr></table></figure>
+
+<p>信息表明系统中只有一个 node 0 节点，总共有 262144 的物理页面，页面大小为 4KB，所以内存大小为 1GB。</p>
+<p>其中还分配了 4096 的页面用于 memmap，系统中有一个重要的全局变量 <code>mem_map</code>，是 page 结构数组，可以快速把虚拟地址转换为物理地址（线性映射）。</p>
+<p><code>mm/memory.c</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">page</span> *<span class="hljs-title">mem_map</span>;</span><br></code></pre></td></tr></table></figure>
+
+<p><code>mem_map</code> 大小是由函数 <code>calc_memmap_size</code> 计算的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> __init <span class="hljs-title function_">calc_memmap_size</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> spanned_pages,</span><br><span class="hljs-params">						<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> present_pages)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pages = spanned_pages;<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Provide a more accurate estimation if there are holes within</span><br><span class="hljs-comment">	 * the zone and SPARSEMEM is in use. If there are holes within the</span><br><span class="hljs-comment">	 * zone, each populated memory region may cost us one or two extra</span><br><span class="hljs-comment">	 * memmap pages due to alignment because memmap pages for each</span><br><span class="hljs-comment">	 * populated regions may not be naturally aligned on page boundary.</span><br><span class="hljs-comment">	 * So the (present_pages &gt;&gt; 4) heuristic is a tradeoff for that.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (spanned_pages &gt; present_pages + (present_pages &gt;&gt; <span class="hljs-number">4</span>) &amp;&amp;<br>	    IS_ENABLED(CONFIG_SPARSEMEM))<br>		pages = present_pages;<br><br>	<span class="hljs-keyword">return</span> PAGE_ALIGN(pages * <span class="hljs-keyword">sizeof</span>(<span class="hljs-keyword">struct</span> page)) &gt;&gt; PAGE_SHIFT;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>spanned_pages</code> 表示 zone 中所有的物理页面数量，包括可能不存在的内存空洞，所以如果空洞太大，使用 <code>mem_map</code> 静态数组方式就会比较浪费内存空间。</p>
+<p>所以代码中做了一点折中：</p>
+<ul>
+<li>如果空洞大小大于 <code>present_pages</code> 的 1&#x2F;16，就使用 SPARSEMEM 内存模型，使用 <code>present_pages</code> 计算。</li>
+<li>如果空洞大小小于等于 <code>present_pages</code> 的 1&#x2F;16，就使用 FLATMEM 内存模型，使用 <code>spanned_pages</code> 计算。</li>
+</ul>
+<p>最后一行 log 在 <code>zone_pcp_init</code> 中计算并打印，LIFO 为每个 CPU 的本地页面池。</p>
+<p>我们从 <code>bootmem_init</code> 开始分析 zone 的初始化过程，调用路径为：</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs asciidoc">start<span class="hljs-emphasis">_kernel</span><br><span class="hljs-emphasis">	setup_arch</span><br><span class="hljs-emphasis">		bootmem_</span>init<br><span class="hljs-code">				</span><br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> __init <span class="hljs-title function_">bootmem_init</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> min, max;<br><br>	min = PFN_UP(memblock_start_of_DRAM());<br>	max = PFN_DOWN(memblock_end_of_DRAM());<br><br>	early_memtest(min &lt;&lt; PAGE_SHIFT, max &lt;&lt; PAGE_SHIFT);<br><br>	max_pfn = max_low_pfn = max;<br><br>	arm64_numa_init();<br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Sparsemem tries to allocate bootmem in memory_present(), so must be</span><br><span class="hljs-comment">	 * done after the fixed reservations.</span><br><span class="hljs-comment">	 */</span><br>	arm64_memory_present();<br><br>	sparse_init();<br>	pr_alert(<span class="hljs-string">&quot;%s, min: %d, max: %d\n&quot;</span>, __func__, min, max);<br>	zone_sizes_init(min, max);<br><br>	memblock_dump_all();<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>主要做的就是将 memblock 的起始和结束地址存入 <code>min</code> 和 <code>max</code> 中 ，然后将它们传给 <code>zone_sizes_init</code> 来初始化。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> __init <span class="hljs-title function_">zone_sizes_init</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> min, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> max)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> max_zone_pfns[MAX_NR_ZONES]  = &#123;<span class="hljs-number">0</span>&#125;;<br><br>	<span class="hljs-keyword">if</span> (IS_ENABLED(CONFIG_ZONE_DMA32))<br>		max_zone_pfns[ZONE_DMA32] = PFN_DOWN(max_zone_dma_phys());<br>	max_zone_pfns[ZONE_NORMAL] = max;<br><br>	free_area_init_nodes(max_zone_pfns);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>计算完 <code>ZONE_DMA32</code> 和 <code>ZONE_NORMAL</code> 管理区的最大页帧号后，这里均为 <code>2097152（0x200000）</code>，对应的物理地址为 <code>0x000000007fffffff</code>（如果系统的物理内存超过 4G，这里的 <code>ZONE_NORMAL</code> 管理区的最大页帧号就和 <code>ZONE_DMA32</code> 的不一样了，现在一样说明 <code>ZONE_NORMAL</code> 为空）， 然后继续调用 <code>free_area_init_nodes</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * free_area_init_nodes - Initialise all pg_data_t and zone data</span><br><span class="hljs-comment"> * @max_zone_pfn: an array of max PFNs for each zone</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * This will call free_area_init_node() for each active node in the system.</span><br><span class="hljs-comment"> * Using the page ranges provided by memblock_set_node(), the size of each</span><br><span class="hljs-comment"> * zone in each node and their holes is calculated. If the maximum PFN</span><br><span class="hljs-comment"> * between two adjacent zones match, it is assumed that the zone is empty.</span><br><span class="hljs-comment"> * For example, if arch_max_dma_pfn == arch_max_dma32_pfn, it is assumed</span><br><span class="hljs-comment"> * that arch_max_dma32_pfn has no pages. It is also assumed that a zone</span><br><span class="hljs-comment"> * starts where the previous one ended. For example, ZONE_DMA32 starts</span><br><span class="hljs-comment"> * at arch_max_dma_pfn.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">void</span> __init <span class="hljs-title function_">free_area_init_nodes</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> *max_zone_pfn)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> start_pfn, end_pfn;<br>	<span class="hljs-type">int</span> i, nid;<br><br>	<span class="hljs-comment">/* Record where the zone boundaries are */</span><br>	<span class="hljs-built_in">memset</span>(arch_zone_lowest_possible_pfn, <span class="hljs-number">0</span>,<br>				<span class="hljs-keyword">sizeof</span>(arch_zone_lowest_possible_pfn));<br>	<span class="hljs-built_in">memset</span>(arch_zone_highest_possible_pfn, <span class="hljs-number">0</span>,<br>				<span class="hljs-keyword">sizeof</span>(arch_zone_highest_possible_pfn));<br><br>	start_pfn = find_min_pfn_with_active_regions();<br><br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; MAX_NR_ZONES; i++) &#123;<br>		<span class="hljs-keyword">if</span> (i == ZONE_MOVABLE)<br>			<span class="hljs-keyword">continue</span>;<br><br>		end_pfn = max(max_zone_pfn[i], start_pfn);<br>		arch_zone_lowest_possible_pfn[i] = start_pfn;<br>		arch_zone_highest_possible_pfn[i] = end_pfn;<br><br>		start_pfn = end_pfn;<br>	&#125;<br><br>	<span class="hljs-comment">/* Find the PFNs that ZONE_MOVABLE begins at in each node */</span><br>	<span class="hljs-built_in">memset</span>(zone_movable_pfn, <span class="hljs-number">0</span>, <span class="hljs-keyword">sizeof</span>(zone_movable_pfn));<br>	find_zone_movable_pfns_for_nodes();<br><br>	<span class="hljs-comment">/* Print out the zone ranges */</span><br>	pr_err(<span class="hljs-string">&quot;Zone ranges:\n&quot;</span>);<br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; MAX_NR_ZONES; i++) &#123;<br>		<span class="hljs-keyword">if</span> (i == ZONE_MOVABLE)<br>			<span class="hljs-keyword">continue</span>;<br>		pr_err(<span class="hljs-string">&quot;  %-8s &quot;</span>, zone_names[i]);<br>		<span class="hljs-keyword">if</span> (arch_zone_lowest_possible_pfn[i] ==<br>				arch_zone_highest_possible_pfn[i])<br>			pr_err(<span class="hljs-string">&quot;empty\n&quot;</span>);<br>		<span class="hljs-keyword">else</span><br>			pr_err(<span class="hljs-string">&quot;[mem %#018Lx-%#018Lx]\n&quot;</span>,<br>				(u64)arch_zone_lowest_possible_pfn[i]<br>					&lt;&lt; PAGE_SHIFT,<br>				((u64)arch_zone_highest_possible_pfn[i]<br>					&lt;&lt; PAGE_SHIFT) - <span class="hljs-number">1</span>);<br>	&#125;<br><br>	<span class="hljs-comment">/* Print out the PFNs ZONE_MOVABLE begins at in each node */</span><br>	pr_err(<span class="hljs-string">&quot;Movable zone start for each node\n&quot;</span>);<br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; MAX_NUMNODES; i++) &#123;<br>		<span class="hljs-keyword">if</span> (zone_movable_pfn[i])<br>			pr_err(<span class="hljs-string">&quot;  Node %d: %#018Lx\n&quot;</span>, i,<br>			       (u64)zone_movable_pfn[i] &lt;&lt; PAGE_SHIFT);<br>	&#125;<br><br>	<span class="hljs-comment">/* Print out the early node map */</span><br>	pr_err(<span class="hljs-string">&quot;Early memory node ranges\n&quot;</span>);<br>	for_each_mem_pfn_range(i, MAX_NUMNODES, &amp;start_pfn, &amp;end_pfn, &amp;nid)<br>		pr_err(<span class="hljs-string">&quot;  node %3d: [mem %#018Lx-%#018Lx]\n&quot;</span>, nid,<br>			(u64)start_pfn &lt;&lt; PAGE_SHIFT,<br>			((u64)end_pfn &lt;&lt; PAGE_SHIFT) - <span class="hljs-number">1</span>);<br><br>	<span class="hljs-comment">/* Initialise every node */</span><br>	mminit_verify_pageflags_layout();<br>	setup_nr_node_ids();<br>	zero_resv_unavail();<br>	for_each_online_node(nid) &#123;<br>		<span class="hljs-type">pg_data_t</span> *pgdat = NODE_DATA(nid);<br>		free_area_init_node(nid, <span class="hljs-literal">NULL</span>,<br>				find_min_pfn_for_node(nid), <span class="hljs-literal">NULL</span>);<br><br>		<span class="hljs-comment">/* Any memory on that node */</span><br>		<span class="hljs-keyword">if</span> (pgdat-&gt;node_present_pages)<br>			node_set_state(nid, N_MEMORY);<br>		check_for_memory(pgdat, nid);<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>主要做的事情为：</p>
+<ul>
+<li><p><code>arch_zone_lowest_possible_pfn</code> 和 <code>arch_zone_highest_possible_pfn</code> 数组中分别记录了多个管理区的最小和最大页帧号。</p>
+</li>
+<li><p>调用 <code>find_min_pfn_with_active_regions</code> 获取最小页帧号，其实就是从 memblock 中获取的，这里页帧号为 <code>1048576</code> ，对应的物理地址为 <code>0x40000000</code></p>
+</li>
+<li><p>设置 <code>arch_zone_lowest_possible_pfn</code> 和 <code>arch_zone_highest_possible_pfn</code></p>
+</li>
+<li><p>打印出各个 ZONE 的内存范围，qemu 中只有 <code>ZONE_DMA32</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] Zone ranges:<br>[    <span class="hljs-number">0.000000</span>]   DMA32<br>[    <span class="hljs-number">0.000000</span>] [mem <span class="hljs-number">0x0000000040000000</span><span class="hljs-number">-0x000000007fffffff</span>]<br>[    <span class="hljs-number">0.000000</span>]   Normal<br>[    <span class="hljs-number">0.000000</span>] empty<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>从 memblock 中打印出每个内存节点的内存范围</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] Early memory node ranges<br>[    <span class="hljs-number">0.000000</span>]   node   <span class="hljs-number">0</span>: [mem <span class="hljs-number">0x0000000040000000</span><span class="hljs-number">-0x000000007fffffff</span>]<br></code></pre></td></tr></table></figure></li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Set up the zone data structures:</span><br><span class="hljs-comment"> *   - mark all pages reserved</span><br><span class="hljs-comment"> *   - mark all memory queues empty</span><br><span class="hljs-comment"> *   - clear the memory bitmaps</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * <span class="hljs-doctag">NOTE:</span> pgdat should get zeroed by caller.</span><br><span class="hljs-comment"> * <span class="hljs-doctag">NOTE:</span> this function is only called during early init.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">void</span> __init <span class="hljs-title function_">free_area_init_core</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> pglist_data *pgdat)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">zone_type</span> <span class="hljs-title">j</span>;</span><br>	<span class="hljs-type">int</span> nid = pgdat-&gt;node_id;<br><br>	pgdat_init_internals(pgdat);<br>	pgdat-&gt;per_cpu_nodestats = &amp;boot_nodestats;<br><br>	<span class="hljs-keyword">for</span> (j = <span class="hljs-number">0</span>; j &lt; MAX_NR_ZONES; j++) &#123;<br>		<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zone</span> *<span class="hljs-title">zone</span> =</span> pgdat-&gt;node_zones + j;<br>		<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> size, freesize, memmap_pages;<br>		<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> zone_start_pfn = zone-&gt;zone_start_pfn;<br><br>		size = zone-&gt;spanned_pages;<br>		freesize = zone-&gt;present_pages;<br><br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * Adjust freesize so that it accounts for how much memory</span><br><span class="hljs-comment">		 * is used by this zone for memmap. This affects the watermark</span><br><span class="hljs-comment">		 * and per-cpu initialisations</span><br><span class="hljs-comment">		 */</span><br>		memmap_pages = calc_memmap_size(size, freesize);<br>		<span class="hljs-keyword">if</span> (!is_highmem_idx(j)) &#123;<br>			<span class="hljs-keyword">if</span> (freesize &gt;= memmap_pages) &#123;<br>				freesize -= memmap_pages;<br>				<span class="hljs-keyword">if</span> (memmap_pages)<br>					printk(KERN_DEBUG<br>					       <span class="hljs-string">&quot;  %s zone: %lu pages used for memmap\n&quot;</span>,<br>					       zone_names[j], memmap_pages);<br>			&#125; <span class="hljs-keyword">else</span><br>				pr_warn(<span class="hljs-string">&quot;  %s zone: %lu pages exceeds freesize %lu\n&quot;</span>,<br>					zone_names[j], memmap_pages, freesize);<br>		&#125;<br><br>		<span class="hljs-comment">/* Account for reserved pages */</span><br>		<span class="hljs-keyword">if</span> (j == <span class="hljs-number">0</span> &amp;&amp; freesize &gt; dma_reserve) &#123;<br>			freesize -= dma_reserve;<br>			printk(KERN_DEBUG <span class="hljs-string">&quot;  %s zone: %lu pages reserved\n&quot;</span>,<br>					zone_names[<span class="hljs-number">0</span>], dma_reserve);<br>		&#125;<br><br>		<span class="hljs-keyword">if</span> (!is_highmem_idx(j))<br>			nr_kernel_pages += freesize;<br>		<span class="hljs-comment">/* Charge for highmem memmap if there are enough kernel pages */</span><br>		<span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (nr_kernel_pages &gt; memmap_pages * <span class="hljs-number">2</span>)<br>			nr_kernel_pages -= memmap_pages;<br>		nr_all_pages += freesize;<br><br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * Set an approximate value for lowmem here, it will be adjusted</span><br><span class="hljs-comment">		 * when the bootmem allocator frees pages into the buddy system.</span><br><span class="hljs-comment">		 * And all highmem pages will be managed by the buddy system.</span><br><span class="hljs-comment">		 */</span><br>		zone_init_internals(zone, j, nid, freesize);<br><br>		<span class="hljs-keyword">if</span> (!size)<br>			<span class="hljs-keyword">continue</span>;<br><br>		set_pageblock_order();<br>		setup_usemap(pgdat, zone, zone_start_pfn, size);<br>		init_currently_empty_zone(zone, zone_start_pfn, size);<br>		memmap_init(size, nid, j, zone_start_pfn);<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 13 行，获取当前内存节点的 id，因为目前系统中只有一个节点，所以 id &#x3D; 0。</p>
+<p>第 15 行，对 <code>pgdat</code> 结构的初始化，如各个 lru 链表、等待队列、锁等。</p>
+<p>第 16 行，<code>boot_nodestats</code> 是一个 percpu 变量，用于对内存节点内各种页面统计计数。</p>
+<p>第 18 ~ 72 行，对每个 zone 进行初始化</p>
+<p>第 19 行，获取内存节点的某个 zone</p>
+<p>第 21 行，获取这个 zone 的起始页帧号</p>
+<p>第 23 行，<code>size</code> 表示这 zone 包含的所有页面个数，包括空洞、预留等页面</p>
+<p>第 24 行，<code>freesize</code> 表示这个除了空洞的所有页面个数，也就是真正存在的页面，先不管能不能被用来分配使用，而空洞就是不存在的物理内存了，比如某个内存条拔了，那这段内存就真没了，但是它还在这个 zone 的范围内，还有 page 结构表示。</p>
+<p>第 31行，计算用来管理这个 zone 中的内存使用的 <code>memmap</code> 的页面个数，即 page 结构的个数。</p>
+<p>第 32 ~ 39 行，如果这个 zone 不是高端内存，就从 <code>freesize</code> 中减去 <code>memmap</code> 页面，因为这部分内存我们不用使用；如果这个 zone 是高端内存，那 <code>freesize</code> 中会保留 <code>memmap</code> 页面，我觉得是因为高端内存本来就少，就留着吧。到时候等低端内存足够大的时候，再从那部分中扣除。</p>
+<p>第 45 ~ 49 行，除了上面减去 <code>memmap</code> 页面，如果是第 0 个 zone，还得减去系统预留的内存页面。一般预留的内存都在物理内存开始的一段，所以只有 0 zone 才需要做这个事情。 </p>
+<p>第 51 ~ 52 行，如果这个 zone 不是高端内存，将 <code>freesize</code> 统计到 <code>nr_kernel_pages</code> 中</p>
+<p>第 53 ~ 55 行，如果这个 zone 是高端内存，是不统计 <code>nr_kernel_pages</code> 中的，并且如果前面非高端内存统计的内核页面足够多的话，就把高端内存中欠的 <code>memmap</code> 从 <code>nr_kernel_pages</code> 中去掉，这样统计的会更精确一些。参考 <a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/commit/01cefaef40c48c714b7476e62781230993e10dbf">源码提交</a></p>
+<p>第 56 行，所有 zone 的页面都会统计到 <code>nr_all_pages</code> 中</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310121148640.png" srcset="/img/loading.gif" lazyload alt="image-20231012114850459"></p>
+<p>第 63 行，初始化这个 zone 的一些成员，如 <code>zone-&gt;managed_pages</code> 就是真正能被伙伴系统管理的物理页面了。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> __meminit <span class="hljs-title function_">zone_init_internals</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> zone *zone, <span class="hljs-keyword">enum</span> zone_type idx, <span class="hljs-type">int</span> nid,</span><br><span class="hljs-params">							<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> remaining_pages)</span><br>&#123;<br>	atomic_long_set(&amp;zone-&gt;managed_pages, remaining_pages);<br>	zone_set_nid(zone, nid);<br>	zone-&gt;name = zone_names[idx];<br>	zone-&gt;zone_pgdat = NODE_DATA(nid);<br>	spin_lock_init(&amp;zone-&gt;lock);<br>	zone_seqlock_init(zone);<br>	zone_pcp_init(zone);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第68 ~ 69 行，设置这个 zone 的页块的迁移类型。</p>
+<p>第 70 行，设置 zone 所在内存节点的 zone 的个数，初始化 <code>freelist</code> 数组链表，最后设置 <code>initialized</code> 为 1，表示 zone 已完成初始化。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> __meminit <span class="hljs-title function_">init_currently_empty_zone</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> zone *zone,</span><br><span class="hljs-params">					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> zone_start_pfn,</span><br><span class="hljs-params">					<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> size)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pglist_data</span> *<span class="hljs-title">pgdat</span> =</span> zone-&gt;zone_pgdat;<br>	<span class="hljs-type">int</span> zone_idx = zone_idx(zone) + <span class="hljs-number">1</span>;<br><br>	<span class="hljs-keyword">if</span> (zone_idx &gt; pgdat-&gt;nr_zones)<br>		pgdat-&gt;nr_zones = zone_idx;<br><br>	zone-&gt;zone_start_pfn = zone_start_pfn;<br><br>	mminit_dprintk(MMINIT_TRACE, <span class="hljs-string">&quot;memmap_init&quot;</span>,<br>			<span class="hljs-string">&quot;Initialising map node %d zone %lu pfns %lu -&gt; %lu\n&quot;</span>,<br>			pgdat-&gt;node_id,<br>			(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>)zone_idx(zone),<br>			zone_start_pfn, (zone_start_pfn + size));<br><br>	zone_init_free_lists(zone);<br>	zone-&gt;initialized = <span class="hljs-number">1</span>;<br>&#125;<br><br><span class="hljs-type">static</span> <span class="hljs-type">void</span> __meminit <span class="hljs-title function_">zone_init_free_lists</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> zone *zone)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> order, t;<br>	for_each_migratetype_order(order, t) &#123;<br>		INIT_LIST_HEAD(&amp;zone-&gt;free_area[order].free_list[t]);<br>		zone-&gt;free_area[order].nr_free = <span class="hljs-number">0</span>;<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 71 行，主要是初始化 zone 中的 page 数据结构</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> __meminit __weak <span class="hljs-title function_">memmap_init</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> size, <span class="hljs-type">int</span> nid,</span><br><span class="hljs-params">				  <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> zone, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> start_pfn)</span><br>&#123;<br>	memmap_init_zone(size, nid, zone, start_pfn, MEMMAP_EARLY, <span class="hljs-literal">NULL</span>);<br>&#125;<br><br><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Initially all pages are reserved - free ones are freed</span><br><span class="hljs-comment"> * up by memblock_free_all() once the early boot process is</span><br><span class="hljs-comment"> * done. Non-atomic initialization, single-pass.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">void</span> __meminit <span class="hljs-title function_">memmap_init_zone</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> size, <span class="hljs-type">int</span> nid, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> zone,</span><br><span class="hljs-params">		<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> start_pfn, <span class="hljs-keyword">enum</span> memmap_context context,</span><br><span class="hljs-params">		<span class="hljs-keyword">struct</span> vmem_altmap *altmap)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pfn, end_pfn = start_pfn + size;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">page</span> *<span class="hljs-title">page</span>;</span><br><br>	<span class="hljs-keyword">if</span> (highest_memmap_pfn &lt; end_pfn - <span class="hljs-number">1</span>)<br>		highest_memmap_pfn = end_pfn - <span class="hljs-number">1</span>;<br><br>    ...<br><br>	<span class="hljs-keyword">for</span> (pfn = start_pfn; pfn &lt; end_pfn; pfn++) &#123;<br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * There can be holes in boot-time mem_map[]s handed to this</span><br><span class="hljs-comment">		 * function.  They do not exist on hotplugged memory.</span><br><span class="hljs-comment">		 */</span><br>		<span class="hljs-keyword">if</span> (context == MEMMAP_EARLY) &#123;<br>			<span class="hljs-keyword">if</span> (!early_pfn_valid(pfn))<br>				<span class="hljs-keyword">continue</span>;<br>			<span class="hljs-keyword">if</span> (!early_pfn_in_nid(pfn, nid))<br>				<span class="hljs-keyword">continue</span>;<br>			<span class="hljs-keyword">if</span> (overlap_memmap_init(zone, &amp;pfn))<br>				<span class="hljs-keyword">continue</span>;<br>			<span class="hljs-keyword">if</span> (defer_init(nid, pfn, end_pfn))<br>				<span class="hljs-keyword">break</span>;<br>		&#125;<br><br>		page = pfn_to_page(pfn);<br>		__init_single_page(page, pfn, zone, nid);<br>		<span class="hljs-keyword">if</span> (context == MEMMAP_HOTPLUG)<br>			__SetPageReserved(page);<br><br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * Mark the block movable so that blocks are reserved for</span><br><span class="hljs-comment">		 * movable at startup. This will force kernel allocations</span><br><span class="hljs-comment">		 * to reserve their blocks rather than leaking throughout</span><br><span class="hljs-comment">		 * the address space during boot when many long-lived</span><br><span class="hljs-comment">		 * kernel allocations are made.</span><br><span class="hljs-comment">		 *</span><br><span class="hljs-comment">		 * bitmap is created for zone&#x27;s valid pfn range. but memmap</span><br><span class="hljs-comment">		 * can be created for invalid pages (for alignment)</span><br><span class="hljs-comment">		 * check here not to call set_pageblock_migratetype() against</span><br><span class="hljs-comment">		 * pfn out of zone.</span><br><span class="hljs-comment">		 */</span><br>		<span class="hljs-keyword">if</span> (!(pfn &amp; (pageblock_nr_pages - <span class="hljs-number">1</span>))) &#123;<br>			set_pageblock_migratetype(page, MIGRATE_MOVABLE);<br>			cond_resched();<br>		&#125;<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 19 ~ 20 行，将最大的 pfn 存入 <code>highest_memmap_pfn</code> 变量中</p>
+<p>第 24 ~ 61 行，对这个 zone 中所有的 page 结构进行初始化</p>
+<p>第 29 行，这里传入的 <code>context</code> 是 <code>MEMMAP_EARLY</code>，表示在系统启动过程中，而不是内存热插拔过程中（<code>MEMMAP_HOTPLUG</code>）</p>
+<p>第 30、32 行，依次判断 pfn 是否有效并且在当前内存节点中，如果不是，就跳过</p>
+<p>第 34 行，判断 pfn 是否在 <code>MEMBLOCK_MIRROR</code> 的 memblock region 中，<code>MEMBLOCK_MIRROR</code> 表示这个区域是镜像区域，如果是就跳过。<a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/commit/a9a9e77fbf2784ae2694696eb772419c0a96159e">这里就是这笔提交</a>，而且 <a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/commit/948c436e463d34e0d716aff0f333bb74471e5399">这里是对这笔提交的改进</a></p>
+<p>第 40 行，通过 pfn 得到 page 数据结构</p>
+<p>第 41 行，初始化 page 数据结构</p>
+<p>第 57 ~ 58 行，将每个页块的起始页面设置成 <code>MIGRATE_MOVABLE</code> 的迁移类型</p>
+<p>我们看一下 <code>__init_single_page</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> __meminit __init_single_page(<span class="hljs-keyword">struct</span> page *page, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pfn,<br>				<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> zone, <span class="hljs-type">int</span> nid)<br>&#123;<br>	mm_zero_struct_page(page);<br>	set_page_links(page, zone, nid, pfn);<br>	init_page_count(page);<br>	page_mapcount_reset(page);<br>	page_cpupid_reset_last(page);<br>	page_kasan_tag_reset(page);<br><br>	INIT_LIST_HEAD(&amp;page-&gt;lru);<br>	...<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 4 行，将 page 数据结构内存空间清零</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> mm_zero_struct_page(pp)  ((void)memset((pp), 0, sizeof(struct page)))</span><br></code></pre></td></tr></table></figure>
+
+<p>第 5 行，设置 page 属于哪个 zone，哪个 node</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-type">void</span> <span class="hljs-title function_">set_page_zone</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> page *page, <span class="hljs-keyword">enum</span> zone_type zone)</span><br>&#123;<br>	page-&gt;flags &amp;= ~(ZONES_MASK &lt;&lt; ZONES_PGSHIFT);<br>	page-&gt;flags |= (zone &amp; ZONES_MASK) &lt;&lt; ZONES_PGSHIFT;<br>&#125;<br><br><span class="hljs-type">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-type">void</span> <span class="hljs-title function_">set_page_node</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> page *page, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> node)</span><br>&#123;<br>	page-&gt;flags &amp;= ~(NODES_MASK &lt;&lt; NODES_PGSHIFT);<br>	page-&gt;flags |= (node &amp; NODES_MASK) &lt;&lt; NODES_PGSHIFT;<br>&#125;<br><br><span class="hljs-type">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-type">void</span> <span class="hljs-title function_">set_page_links</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> page *page, <span class="hljs-keyword">enum</span> zone_type zone,</span><br><span class="hljs-params">	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> node, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> pfn)</span><br>&#123;<br>	set_page_zone(page, zone);<br>	set_page_node(page, node);<br>	...<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>第 6 行，设置 <code>page-&gt;_refcount</code> 为 1</p>
+<p>第 7 行，设置 <code>page-&gt;_mapcount</code> 为 -1</p>
+<p>第 8 ~ 9 行，设置 page 的 cpuid 和 kasan 标志</p>
+<p>第 11 行，初始化 page 的 lru 链表</p>
+<p>至此 zone 数据结构的初始化就结束了。然后我们再看看物理页面是怎么加入到伙伴系统的。</p>
+<p>调用路径为:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c">start_kernel<br>	mm_init<br>		mem_init<br>			memblock_free_all<br>				free_low_memory_core_early<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> __init <span class="hljs-title function_">free_low_memory_core_early</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> count = <span class="hljs-number">0</span>;<br>	<span class="hljs-type">phys_addr_t</span> start, end;<br>	u64 i;<br><br>	memblock_clear_hotplug(<span class="hljs-number">0</span>, <span class="hljs-number">-1</span>);<br><br>	for_each_reserved_mem_region(i, &amp;start, &amp;end)<br>		reserve_bootmem_region(start, end);<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * We need to use NUMA_NO_NODE instead of NODE_DATA(0)-&gt;node_id</span><br><span class="hljs-comment">	 *  because in some case like Node0 doesn&#x27;t have RAM installed</span><br><span class="hljs-comment">	 *  low ram will be on Node1</span><br><span class="hljs-comment">	 */</span><br>	for_each_free_mem_range(i, NUMA_NO_NODE, MEMBLOCK_NONE, &amp;start, &amp;end,<br>				<span class="hljs-literal">NULL</span>)<br>		count += __free_memory_core(start, end);<br><br>	<span class="hljs-keyword">return</span> count;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+
+
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linux/" class="print-no-link">#Linux</a>
+      
+        <a href="/tags/%E5%86%85%E5%AD%98/" class="print-no-link">#内存</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>物理内存初始化</div>
+      <div>http://example.com/2023/10/15/linux/kernel/memory/物理内存初始化/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Gao Xiang</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年10月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/10/15/linux/kernel/memory/arm64%20%E5%86%85%E5%AD%98%E5%88%86%E5%B8%83/" title="ARM64 内存分布">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">ARM64 内存分布</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/10/10/linux/kernel/memory/%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84/" title="物理内存映射">
+                        <span class="hidden-mobile">物理内存映射</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,1091 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Gao Xiang">
+  <meta name="keywords" content="Linux">
+  
+    <meta name="description" content="memblock 分析在系统初始化初期，在伙伴系统没有建立起来之前也有一些内存分配的需求。内核为此开了一个简单的内存管理 - memblock，它在 setup_arch() 中建立起来，然后在 mem_init() 中将内存管理权移交给伙伴系统。 memblock 管理着一个个连续的物理内存区域，并且它们都有不同的属性，比如 “memory” 、”reserved” 等。 数据结构内核中定义了一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="memblock 分析">
+<meta property="og:url" content="http://example.com/2023/10/15/linux/kernel/memory/memblock/index.html">
+<meta property="og:site_name" content="Xiaoa&#39;s Blog">
+<meta property="og:description" content="memblock 分析在系统初始化初期，在伙伴系统没有建立起来之前也有一些内存分配的需求。内核为此开了一个简单的内存管理 - memblock，它在 setup_arch() 中建立起来，然后在 mem_init() 中将内存管理权移交给伙伴系统。 memblock 管理着一个个连续的物理内存区域，并且它们都有不同的属性，比如 “memory” 、”reserved” 等。 数据结构内核中定义了一">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131329696.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131645815.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131646314.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131640045.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310141255012.png">
+<meta property="og:image" content="c:/Users/Mi/AppData/Roaming/Typora/typora-user-images/image-20231014165112248.png">
+<meta property="article:published_time" content="2023-10-15T12:25:35.400Z">
+<meta property="article:modified_time" content="2023-10-15T14:40:06.393Z">
+<meta property="article:author" content="Gao Xiang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="内存">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131329696.png">
+  
+  
+  
+  <title>memblock 分析 - Xiaoa&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.5","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"left","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Linux</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/%E6%B2%99%E6%BC%A0.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="memblock 分析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-10-15 20:25" pubdate>
+          星期日, 十月 15日 2023, 8:25 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          32k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          263 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="padding-left: 2rem; margin-right: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">memblock 分析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="memblock-分析"><a href="#memblock-分析" class="headerlink" title="memblock 分析"></a>memblock 分析</h1><p>在系统初始化初期，在伙伴系统没有建立起来之前也有一些内存分配的需求。内核为此开了一个简单的内存管理 - memblock，它在 <code>setup_arch()</code> 中建立起来，然后在 <code>mem_init()</code> 中将内存管理权移交给伙伴系统。</p>
+<p>memblock 管理着一个个连续的物理内存区域，并且它们都有不同的属性，比如 “memory” 、”reserved” 等。</p>
+<h2 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h2><p>内核中定义了一个 <code>memblock</code> 数据结构，作为其分配器的管理载体，其类型为 <code>struct memblock</code> 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * struct memblock - memblock allocator metadata</span><br><span class="hljs-comment"> * @bottom_up: is bottom up direction?</span><br><span class="hljs-comment"> * @current_limit: physical address of the current allocation limit</span><br><span class="hljs-comment"> * @memory: usabe memory regions</span><br><span class="hljs-comment"> * @reserved: reserved memory regions</span><br><span class="hljs-comment"> * @physmem: all physical memory</span><br><span class="hljs-comment"> */</span><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock</span> &#123;</span><br>	<span class="hljs-type">bool</span> bottom_up;  <span class="hljs-comment">/* is bottom up direction? */</span><br>	<span class="hljs-type">phys_addr_t</span> current_limit;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_type</span> <span class="hljs-title">memory</span>;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_type</span> <span class="hljs-title">reserved</span>;</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_HAVE_MEMBLOCK_PHYS_MAP</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_type</span> <span class="hljs-title">physmem</span>;</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>memblock 分配器管理结构共分为三层，从上向下分别为 <code>struct memblock</code> , <code>struct memblock_type</code> , <code>struct memblock_region</code> 。它们之间的关系为：</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131329696.png" srcset="/img/loading.gif" lazyload alt="image-20231013132943561"></p>
+<p>先来看一下这几个数据结构：</p>
+<h3 id="memblock"><a href="#memblock" class="headerlink" title="memblock"></a>memblock</h3><p><code>struct memblock </code>描述了分配器的整体特性</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * struct memblock - memblock allocator metadata</span><br><span class="hljs-comment"> * @bottom_up: is bottom up direction?</span><br><span class="hljs-comment"> * @current_limit: physical address of the current allocation limit</span><br><span class="hljs-comment"> * @memory: usabe memory regions</span><br><span class="hljs-comment"> * @reserved: reserved memory regions</span><br><span class="hljs-comment"> * @physmem: all physical memory</span><br><span class="hljs-comment"> */</span><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock</span> &#123;</span><br>	<span class="hljs-type">bool</span> bottom_up;  <span class="hljs-comment">/* is bottom up direction? */</span><br>	<span class="hljs-type">phys_addr_t</span> current_limit;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_type</span> <span class="hljs-title">memory</span>;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_type</span> <span class="hljs-title">reserved</span>;</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_HAVE_MEMBLOCK_PHYS_MAP</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_type</span> <span class="hljs-title">physmem</span>;</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>成员</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>bottom_up</td>
+<td>描述了分配器管理内存的方向<br />如果是从底向上，取 <code>true</code> <br />如果是从从到底，取 <code>false</code></td>
+</tr>
+<tr>
+<td>current_limit</td>
+<td>表示了 memblock 分配器可以管理的内存上限</td>
+</tr>
+<tr>
+<td>memory</td>
+<td>表示可用的内存类型，即可以被分配使用</td>
+</tr>
+<tr>
+<td>reserved</td>
+<td>表示预留的内存类型，即这段内存有特殊用途，不能被分配使用，比如内核镜像的内存区域</td>
+</tr>
+</tbody></table>
+<h3 id="memblock-type"><a href="#memblock-type" class="headerlink" title="memblock_type"></a>memblock_type</h3><p><code>struct memblock_type</code> 描述了不同的内存类型，如可用的内 、预留的内存，并且管理这些类型的各个内存区域。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * struct memblock_type - collection of memory regions of certain type</span><br><span class="hljs-comment"> * @cnt: number of regions</span><br><span class="hljs-comment"> * @max: size of the allocated array</span><br><span class="hljs-comment"> * @total_size: size of all regions</span><br><span class="hljs-comment"> * @regions: array of regions</span><br><span class="hljs-comment"> * @name: the memory type symbolic name</span><br><span class="hljs-comment"> */</span><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_type</span> &#123;</span><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> cnt;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> max;<br>	<span class="hljs-type">phys_addr_t</span> total_size;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> *<span class="hljs-title">regions</span>;</span><br>	<span class="hljs-type">char</span> *name;<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>成员</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>cnt</td>
+<td>描述了内存区域的数量</td>
+</tr>
+<tr>
+<td>max</td>
+<td>内存区域数组可分配的最大的数量，如果超过这个值，就会倍增 region 的内存空间</td>
+</tr>
+<tr>
+<td>total_size</td>
+<td>表示这种类型的内存总页面数</td>
+</tr>
+<tr>
+<td>regions</td>
+<td>内存区域数组</td>
+</tr>
+<tr>
+<td>name</td>
+<td>这种类型的内存名称，如 memory、reserved</td>
+</tr>
+</tbody></table>
+<h3 id="memblock-region"><a href="#memblock-region" class="headerlink" title="memblock_region"></a>memblock_region</h3><p><code>struct memblock_region</code> 表示一个个内存区域</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * struct memblock_region - represents a memory region</span><br><span class="hljs-comment"> * @base: physical address of the region</span><br><span class="hljs-comment"> * @size: size of the region</span><br><span class="hljs-comment"> * @flags: memory region attributes</span><br><span class="hljs-comment"> * @nid: NUMA node id</span><br><span class="hljs-comment"> */</span><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> &#123;</span><br>	<span class="hljs-type">phys_addr_t</span> base;<br>	<span class="hljs-type">phys_addr_t</span> size;<br>	<span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">memblock_flags</span> <span class="hljs-title">flags</span>;</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_HAVE_MEMBLOCK_NODE_MAP</span><br>	<span class="hljs-type">int</span> nid;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>成员</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>base</td>
+<td>内存区域的起始地址</td>
+</tr>
+<tr>
+<td>size</td>
+<td>内存区域的大小</td>
+</tr>
+<tr>
+<td>flags</td>
+<td>内存区域的属性，如普通类型还是热插拔类型等</td>
+</tr>
+<tr>
+<td>nid</td>
+<td>所属内存节点</td>
+</tr>
+</tbody></table>
+<h3 id="memblock-flags"><a href="#memblock-flags" class="headerlink" title="memblock_flags"></a>memblock_flags</h3><p>memblock 管理的内存有多种属性</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * enum memblock_flags - definition of memory region attributes</span><br><span class="hljs-comment"> * @MEMBLOCK_NONE: no special request</span><br><span class="hljs-comment"> * @MEMBLOCK_HOTPLUG: hotpluggable region</span><br><span class="hljs-comment"> * @MEMBLOCK_MIRROR: mirrored region</span><br><span class="hljs-comment"> * @MEMBLOCK_NOMAP: don&#x27;t add to kernel direct mapping</span><br><span class="hljs-comment"> */</span><br><span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">memblock_flags</span> &#123;</span><br>	MEMBLOCK_NONE		= <span class="hljs-number">0x0</span>,	<span class="hljs-comment">/* No special request */</span><br>	MEMBLOCK_HOTPLUG	= <span class="hljs-number">0x1</span>,	<span class="hljs-comment">/* hotpluggable region */</span><br>	MEMBLOCK_MIRROR		= <span class="hljs-number">0x2</span>,	<span class="hljs-comment">/* mirrored region */</span><br>	MEMBLOCK_NOMAP		= <span class="hljs-number">0x4</span>,	<span class="hljs-comment">/* don&#x27;t add to kernel direct mapping */</span><br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>标志</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MEMBLOCK_NONE</td>
+<td>没有特殊要求的区域，如正常使用的内存</td>
+</tr>
+<tr>
+<td>MEMBLOCK_HOTPLUG</td>
+<td>热插拔的内存区域，如某个内存条可以热插拔</td>
+</tr>
+<tr>
+<td>MEMBLOCK_MIRROR</td>
+<td>镜像区域，表示内存中的数据进行了备份？</td>
+</tr>
+<tr>
+<td>MEMBLOCK_NOMAP</td>
+<td>表示这里的内存不能被映射到虚拟内存空间，如在 <code>mmap_mem</code> 中 先将内核映像设置为 MEMBLOCK_NOMAP，就是为了先不映射内核映像区域。</td>
+</tr>
+</tbody></table>
+<h2 id="接口"><a href="#接口" class="headerlink" title="接口"></a>接口</h2><h3 id="memblock-add-memblock-reserve"><a href="#memblock-add-memblock-reserve" class="headerlink" title="memblock_add &#x2F; memblock_reserve"></a>memblock_add &#x2F; memblock_reserve</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * memblock_add - add new memblock region</span><br><span class="hljs-comment"> * @base: base address of the new region</span><br><span class="hljs-comment"> * @size: size of the new region</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Add new memblock region [@base, @base + @size) to the &quot;memory&quot;</span><br><span class="hljs-comment"> * type. See memblock_add_range() description for mode details</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Return:</span><br><span class="hljs-comment"> * 0 on success, -errno on failure.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">int</span> __init_memblock <span class="hljs-title function_">memblock_add</span><span class="hljs-params">(<span class="hljs-type">phys_addr_t</span> base, <span class="hljs-type">phys_addr_t</span> size)</span><br>&#123;<br>	<span class="hljs-type">phys_addr_t</span> end = base + size - <span class="hljs-number">1</span>;<br><br>	memblock_dbg(<span class="hljs-string">&quot;memblock_add: [%pa-%pa] %pF\n&quot;</span>,<br>		     &amp;base, &amp;end, (<span class="hljs-type">void</span> *)_RET_IP_);<br><br>	<span class="hljs-keyword">return</span> memblock_add_range(&amp;memblock.memory, base, size, MAX_NUMNODES, <span class="hljs-number">0</span>);<br>&#125;<br><br><span class="hljs-type">int</span> __init_memblock <span class="hljs-title function_">memblock_reserve</span><span class="hljs-params">(<span class="hljs-type">phys_addr_t</span> base, <span class="hljs-type">phys_addr_t</span> size)</span><br>&#123;<br>	<span class="hljs-type">phys_addr_t</span> end = base + size - <span class="hljs-number">1</span>;<br><br>	memblock_dbg(<span class="hljs-string">&quot;memblock_reserve: [%pa-%pa] %pF\n&quot;</span>,<br>		     &amp;base, &amp;end, (<span class="hljs-type">void</span> *)_RET_IP_);<br><br>	<span class="hljs-keyword">return</span> memblock_add_range(&amp;memblock.reserved, base, size, MAX_NUMNODES, <span class="hljs-number">0</span>);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>打印了空间范围后，就调用 <code>memblock_add_range</code> 添加到 memory 或 reserve 类型的 regions 中了。</p>
+<h3 id="memblock-add-range"><a href="#memblock-add-range" class="headerlink" title="memblock_add_range"></a>memblock_add_range</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * memblock_add_range - add new memblock region</span><br><span class="hljs-comment"> * @type: memblock type to add new region into</span><br><span class="hljs-comment"> * @base: base address of the new region</span><br><span class="hljs-comment"> * @size: size of the new region</span><br><span class="hljs-comment"> * @nid: nid of the new region</span><br><span class="hljs-comment"> * @flags: flags of the new region</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Add new memblock region [@base, @base + @size) into @type.  The new region</span><br><span class="hljs-comment"> * is allowed to overlap with existing ones - overlaps don&#x27;t affect already</span><br><span class="hljs-comment"> * existing regions.  @type is guaranteed to be minimal (all neighbouring</span><br><span class="hljs-comment"> * compatible regions are merged) after the addition.</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Return:</span><br><span class="hljs-comment"> * 0 on success, -errno on failure.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">int</span> __init_memblock <span class="hljs-title function_">memblock_add_range</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> memblock_type *type,</span><br><span class="hljs-params">				<span class="hljs-type">phys_addr_t</span> base, <span class="hljs-type">phys_addr_t</span> size,</span><br><span class="hljs-params">				<span class="hljs-type">int</span> nid, <span class="hljs-keyword">enum</span> memblock_flags flags)</span><br>&#123;<br>	<span class="hljs-type">bool</span> insert = <span class="hljs-literal">false</span>;<br>	<span class="hljs-type">phys_addr_t</span> obase = base;<br>	<span class="hljs-type">phys_addr_t</span> end = base + memblock_cap_size(base, &amp;size);<br>	<span class="hljs-type">int</span> idx, nr_new;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> *<span class="hljs-title">rgn</span>;</span><br><br>	<span class="hljs-keyword">if</span> (!size)<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br><br>	<span class="hljs-comment">/* special case for empty array */</span><br>	<span class="hljs-keyword">if</span> (type-&gt;regions[<span class="hljs-number">0</span>].size == <span class="hljs-number">0</span>) &#123;<br>		WARN_ON(type-&gt;cnt != <span class="hljs-number">1</span> || type-&gt;total_size);<br>		type-&gt;regions[<span class="hljs-number">0</span>].base = base;<br>		type-&gt;regions[<span class="hljs-number">0</span>].size = size;<br>		type-&gt;regions[<span class="hljs-number">0</span>].flags = flags;<br>		memblock_set_region_node(&amp;type-&gt;regions[<span class="hljs-number">0</span>], nid);<br>		type-&gt;total_size = size;<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>	&#125;<br>repeat:<br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * The following is executed twice.  Once with %false @insert and</span><br><span class="hljs-comment">	 * then with %true.  The first counts the number of regions needed</span><br><span class="hljs-comment">	 * to accommodate the new area.  The second actually inserts them.</span><br><span class="hljs-comment">	 */</span><br>	base = obase;<br>	nr_new = <span class="hljs-number">0</span>;<br><br>	for_each_memblock_type(idx, type, rgn) &#123;<br>		<span class="hljs-type">phys_addr_t</span> rbase = rgn-&gt;base;<br>		<span class="hljs-type">phys_addr_t</span> rend = rbase + rgn-&gt;size;<br><br>		<span class="hljs-keyword">if</span> (rbase &gt;= end)<br>			<span class="hljs-keyword">break</span>;<br>		<span class="hljs-keyword">if</span> (rend &lt;= base)<br>			<span class="hljs-keyword">continue</span>;<br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * @rgn overlaps.  If it separates the lower part of new</span><br><span class="hljs-comment">		 * area, insert that portion.</span><br><span class="hljs-comment">		 */</span><br>		<span class="hljs-keyword">if</span> (rbase &gt; base) &#123;<br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_HAVE_MEMBLOCK_NODE_MAP</span><br>			WARN_ON(nid != memblock_get_region_node(rgn));<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>			WARN_ON(flags != rgn-&gt;flags);<br>			nr_new++;<br>			<span class="hljs-keyword">if</span> (insert)<br>				memblock_insert_region(type, idx++, base,<br>						       rbase - base, nid,<br>						       flags);<br>		&#125;<br>		<span class="hljs-comment">/* area below @rend is dealt with, forget about it */</span><br>		base = min(rend, end);<br>	&#125;<br><br>	<span class="hljs-comment">/* insert the remaining portion */</span><br>	<span class="hljs-keyword">if</span> (base &lt; end) &#123;<br>		nr_new++;<br>		<span class="hljs-keyword">if</span> (insert)<br>			memblock_insert_region(type, idx, base, end - base,<br>					       nid, flags);<br>	&#125;<br><br>	<span class="hljs-keyword">if</span> (!nr_new)<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * If this was the first round, resize array and repeat for actual</span><br><span class="hljs-comment">	 * insertions; otherwise, merge and return.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (!insert) &#123;<br>		<span class="hljs-keyword">while</span> (type-&gt;cnt + nr_new &gt; type-&gt;max)<br>			<span class="hljs-keyword">if</span> (memblock_double_array(type, obase, size) &lt; <span class="hljs-number">0</span>)<br>				<span class="hljs-keyword">return</span> -ENOMEM;<br>		insert = <span class="hljs-literal">true</span>;<br>		<span class="hljs-keyword">goto</span> repeat;<br>	&#125; <span class="hljs-keyword">else</span> &#123;<br>		memblock_merge_regions(type);<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>主要做的事为：</p>
+<ul>
+<li><p>当前类型集合为空时，即 <code>type-&gt;regions[0].size == 0</code>，直接将区域起始地址、大小等填入第一个 <code>regions</code> 中，并记录总大小 <code>total_size</code> 完成添加，直接返回 0 。否则进入 <code>reapeat</code> 标号处代码执行。</p>
+</li>
+<li><p>当前类型集合不为空时执行 <code>repeat</code> 标号后代码，这个循环每次将会执行两次，第一次 <code>insert</code> 为 <code>false</code>，<code>memblock_insert_region</code> 函数不会执行，仅对需要插入的区域计数，第二次执行 <code>memblock_insert_region</code> 时完成实际插入操作。目的是保证数组 <code>regions</code> 有足够的空间可以容纳插入的区域数（第一次如果 cnt + 1 &gt; max，则会讲 regions 空间翻倍）。 <code>repeat</code> 标号后代码主要逻辑如下：</p>
+<ul>
+<li><p>使用 <code>for_each_memblock_type</code> 循环，遍历已存在区域，获取存在区域的起始地址 <code>rbase</code> 和结束地址 <code>rend</code> 。</p>
+</li>
+<li><p>若新区域在当前遍历区域之前，即 <code>rbase &gt;= end</code>，分两种情况：</p>
+<ul>
+<li><p><code>rbase</code> 为 <code>regions[0]</code> 的起始地址，即一个区域，说明前面没有任何区域了，所以肯定不会重叠，然后在第二次循环中插入当前区域之前即可。</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131645815.png" srcset="/img/loading.gif" lazyload alt="image-20231013164558778"></p>
+</li>
+<li><p>新区域的 <code>end</code> 大于当前区域的 <code>rbase</code>，continue 继续看后面区域，直到某个区域的 <code>rbase</code> 大于 <code>end</code>，也就是新区域和前后两个区域都不重叠</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131646314.png" srcset="/img/loading.gif" lazyload alt="image-20231013164647272"></p>
+</li>
+</ul>
+</li>
+<li><p>若新区域在当前遍历区域之后，并有重叠，分三种情况：</p>
+<ul>
+<li><p>头部处，重叠之前有不重叠部分，即 <code>rbase &gt; base</code>，则需将新区域前面未和原有区块重叠的那部分插入，并后移新区域起始地址 <code>base</code>，即 <code>base = min(rend, end)</code>。</p>
+</li>
+<li><p>尾部处，重叠之后有不重叠部分，即 <code>base &lt; end</code>，若有则这部分也要插入集合。</p>
+</li>
+<li><p>头尾都有重叠</p>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310131640045.png" srcset="/img/loading.gif" lazyload alt="image-20231013164045001"></p>
+</li>
+</ul>
+</li>
+<li><p>插入工作完成后，调用 <code>memblock_merge_regions</code> 函数将地址相邻的区域合并为一个区域。</p>
+</li>
+</ul>
+</li>
+<li><p>再来看一下 <code>for_each_memblock_type</code> 遍历的宏，很简单，从当前类型的第 0 个区域开始遍历 <code>cnt</code> 次</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> for_each_memblock_type(i, memblock_type, rgn)			\</span><br><span class="hljs-meta">	for (i = 0, rgn = &amp;memblock_type-&gt;regions[0];			\</span><br><span class="hljs-meta">	     i <span class="hljs-string">&lt; memblock_type-&gt;</span>cnt;					\</span><br><span class="hljs-meta">	     i++, rgn = &amp;memblock_type-&gt;regions[i])</span><br></code></pre></td></tr></table></figure></li>
+</ul>
+<h3 id="memblock-insert-region"><a href="#memblock-insert-region" class="headerlink" title="memblock_insert_region"></a>memblock_insert_region</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * memblock_insert_region - insert new memblock region</span><br><span class="hljs-comment"> * @type:	memblock type to insert into</span><br><span class="hljs-comment"> * @idx:	index for the insertion point</span><br><span class="hljs-comment"> * @base:	base address of the new region</span><br><span class="hljs-comment"> * @size:	size of the new region</span><br><span class="hljs-comment"> * @nid:	node id of the new region</span><br><span class="hljs-comment"> * @flags:	flags of the new region</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Insert new memblock region [@base, @base + @size) into @type at @idx.</span><br><span class="hljs-comment"> * @type must already have extra room to accommodate the new region.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">void</span> __init_memblock <span class="hljs-title function_">memblock_insert_region</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> memblock_type *type,</span><br><span class="hljs-params">						   <span class="hljs-type">int</span> idx, <span class="hljs-type">phys_addr_t</span> base,</span><br><span class="hljs-params">						   <span class="hljs-type">phys_addr_t</span> size,</span><br><span class="hljs-params">						   <span class="hljs-type">int</span> nid,</span><br><span class="hljs-params">						   <span class="hljs-keyword">enum</span> memblock_flags flags)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> *<span class="hljs-title">rgn</span> =</span> &amp;type-&gt;regions[idx];<br><br>	BUG_ON(type-&gt;cnt &gt;= type-&gt;max);<br>	memmove(rgn + <span class="hljs-number">1</span>, rgn, (type-&gt;cnt - idx) * <span class="hljs-keyword">sizeof</span>(*rgn));<br>	rgn-&gt;base = base;<br>	rgn-&gt;size = size;<br>	rgn-&gt;flags = flags;<br>	memblock_set_region_node(rgn, nid);<br>	type-&gt;cnt++;<br>	type-&gt;total_size += size;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>主要做的事为：</p>
+<ul>
+<li>获取要插入的 regions</li>
+<li>先把从要插入的位置以后的所有 regions 整体后移一次</li>
+<li>用新区域的值填充当前 regions 结构</li>
+</ul>
+<h3 id="memblock-merge-regions"><a href="#memblock-merge-regions" class="headerlink" title="memblock_merge_regions"></a>memblock_merge_regions</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * memblock_merge_regions - merge neighboring compatible regions</span><br><span class="hljs-comment"> * @type: memblock type to scan</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Scan @type and merge neighboring compatible regions.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">void</span> __init_memblock <span class="hljs-title function_">memblock_merge_regions</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> memblock_type *type)</span><br>&#123;<br>	<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>;<br><br>	<span class="hljs-comment">/* cnt never goes below 1 */</span><br>	<span class="hljs-keyword">while</span> (i &lt; type-&gt;cnt - <span class="hljs-number">1</span>) &#123;<br>		<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> *<span class="hljs-title">this</span> =</span> &amp;type-&gt;regions[i];<br>		<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> *<span class="hljs-title">next</span> =</span> &amp;type-&gt;regions[i + <span class="hljs-number">1</span>];<br><br>		<span class="hljs-keyword">if</span> (this-&gt;base + this-&gt;size != next-&gt;base ||<br>		    memblock_get_region_node(this) !=<br>		    memblock_get_region_node(next) ||<br>		    this-&gt;flags != next-&gt;flags) &#123;<br>			BUG_ON(this-&gt;base + this-&gt;size &gt; next-&gt;base);<br>			i++;<br>			<span class="hljs-keyword">continue</span>;<br>		&#125;<br><br>		this-&gt;size += next-&gt;size;<br>		<span class="hljs-comment">/* move forward from next + 1, index of which is i + 2 */</span><br>		memmove(next, next + <span class="hljs-number">1</span>, (type-&gt;cnt - (i + <span class="hljs-number">2</span>)) * <span class="hljs-keyword">sizeof</span>(*next));<br>		type-&gt;cnt--;<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>从 regions[0] 开始和相邻的 regions 比较，除了下面三种情况，都可以合并：</p>
+<ul>
+<li>当前 regions 的 base + size 不等于下一个 regions 的 base，也就是两个 regions 头尾不相接</li>
+<li>相邻两个 regions 不属于同一个内存节点</li>
+<li>相邻两个 regions 的属性不一样</li>
+</ul>
+<p>判断不能合并后直接 <code>continue</code> 查看下一个 regions，如果可以合并，将 <code>next</code> regions 合并到 <code>this</code> regions 上，并且将 <code>next</code> + 1 regions 开始后面的 regions 都前移一次。</p>
+<h3 id="memblock-double-array"><a href="#memblock-double-array" class="headerlink" title="memblock_double_array"></a>memblock_double_array</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * memblock_double_array - double the size of the memblock regions array</span><br><span class="hljs-comment"> * @type: memblock type of the regions array being doubled</span><br><span class="hljs-comment"> * @new_area_start: starting address of memory range to avoid overlap with</span><br><span class="hljs-comment"> * @new_area_size: size of memory range to avoid overlap with</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Double the size of the @type regions array. If memblock is being used to</span><br><span class="hljs-comment"> * allocate memory for a new reserved regions array and there is a previously</span><br><span class="hljs-comment"> * allocated memory range [@new_area_start, @new_area_start + @new_area_size]</span><br><span class="hljs-comment"> * waiting to be reserved, ensure the memory used by the new array does</span><br><span class="hljs-comment"> * not overlap.</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Return:</span><br><span class="hljs-comment"> * 0 on success, -1 on failure.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">int</span> __init_memblock <span class="hljs-title function_">memblock_double_array</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> memblock_type *type,</span><br><span class="hljs-params">						<span class="hljs-type">phys_addr_t</span> new_area_start,</span><br><span class="hljs-params">						<span class="hljs-type">phys_addr_t</span> new_area_size)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> *<span class="hljs-title">new_array</span>, *<span class="hljs-title">old_array</span>;</span><br>	<span class="hljs-type">phys_addr_t</span> old_alloc_size, new_alloc_size;<br>	<span class="hljs-type">phys_addr_t</span> old_size, new_size, addr, new_end;<br>	<span class="hljs-type">int</span> use_slab = slab_is_available();<br>	<span class="hljs-type">int</span> *in_slab;<br><br>	<span class="hljs-comment">/* We don&#x27;t allow resizing until we know about the reserved regions</span><br><span class="hljs-comment">	 * of memory that aren&#x27;t suitable for allocation</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (!memblock_can_resize)<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br><br>	<span class="hljs-comment">/* Calculate new doubled size */</span><br>	old_size = type-&gt;max * <span class="hljs-keyword">sizeof</span>(<span class="hljs-keyword">struct</span> memblock_region);<br>	new_size = old_size &lt;&lt; <span class="hljs-number">1</span>;<br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * We need to allocated new one align to PAGE_SIZE,</span><br><span class="hljs-comment">	 *   so we can free them completely later.</span><br><span class="hljs-comment">	 */</span><br>	old_alloc_size = PAGE_ALIGN(old_size);<br>	new_alloc_size = PAGE_ALIGN(new_size);<br><br>	<span class="hljs-comment">/* Retrieve the slab flag */</span><br>	<span class="hljs-keyword">if</span> (type == &amp;memblock.memory)<br>		in_slab = &amp;memblock_memory_in_slab;<br>	<span class="hljs-keyword">else</span><br>		in_slab = &amp;memblock_reserved_in_slab;<br><br>	<span class="hljs-comment">/* Try to find some space for it.</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * WARNING: We assume that either slab_is_available() and we use it or</span><br><span class="hljs-comment">	 * we use MEMBLOCK for allocations. That means that this is unsafe to</span><br><span class="hljs-comment">	 * use when bootmem is currently active (unless bootmem itself is</span><br><span class="hljs-comment">	 * implemented on top of MEMBLOCK which isn&#x27;t the case yet)</span><br><span class="hljs-comment">	 *</span><br><span class="hljs-comment">	 * This should however not be an issue for now, as we currently only</span><br><span class="hljs-comment">	 * call into MEMBLOCK while it&#x27;s still active, or much later when slab</span><br><span class="hljs-comment">	 * is active for memory hotplug operations</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (use_slab) &#123;<br>		new_array = kmalloc(new_size, GFP_KERNEL);<br>		addr = new_array ? __pa(new_array) : <span class="hljs-number">0</span>;<br>	&#125; <span class="hljs-keyword">else</span> &#123;<br>		<span class="hljs-comment">/* only exclude range when trying to double reserved.regions */</span><br>		<span class="hljs-keyword">if</span> (type != &amp;memblock.reserved)<br>			new_area_start = new_area_size = <span class="hljs-number">0</span>;<br><br>		addr = memblock_find_in_range(new_area_start + new_area_size,<br>						memblock.current_limit,<br>						new_alloc_size, PAGE_SIZE);<br>		<span class="hljs-keyword">if</span> (!addr &amp;&amp; new_area_size)<br>			addr = memblock_find_in_range(<span class="hljs-number">0</span>,<br>				min(new_area_start, memblock.current_limit),<br>				new_alloc_size, PAGE_SIZE);<br><br>		new_array = addr ? __va(addr) : <span class="hljs-literal">NULL</span>;<br>	&#125;<br>	<span class="hljs-keyword">if</span> (!addr) &#123;<br>		pr_err(<span class="hljs-string">&quot;memblock: Failed to double %s array from %ld to %ld entries !\n&quot;</span>,<br>		       type-&gt;name, type-&gt;max, type-&gt;max * <span class="hljs-number">2</span>);<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br>	&#125;<br><br>	new_end = addr + new_size - <span class="hljs-number">1</span>;<br>	memblock_dbg(<span class="hljs-string">&quot;memblock: %s is doubled to %ld at [%pa-%pa]&quot;</span>,<br>			type-&gt;name, type-&gt;max * <span class="hljs-number">2</span>, &amp;addr, &amp;new_end);<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Found space, we now need to move the array over before we add the</span><br><span class="hljs-comment">	 * reserved region since it may be our reserved array itself that is</span><br><span class="hljs-comment">	 * full.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-built_in">memcpy</span>(new_array, type-&gt;regions, old_size);<br>	<span class="hljs-built_in">memset</span>(new_array + type-&gt;max, <span class="hljs-number">0</span>, old_size);<br>	old_array = type-&gt;regions;<br>	type-&gt;regions = new_array;<br>	type-&gt;max &lt;&lt;= <span class="hljs-number">1</span>;<br><br>	<span class="hljs-comment">/* Free old array. We needn&#x27;t free it if the array is the static one */</span><br>	<span class="hljs-keyword">if</span> (*in_slab)<br>		kfree(old_array);<br>	<span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (old_array != memblock_memory_init_regions &amp;&amp;<br>		 old_array != memblock_reserved_init_regions)<br>		memblock_free(__pa(old_array), old_alloc_size);<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Reserve the new array if that comes from the memblock.  Otherwise, we</span><br><span class="hljs-comment">	 * needn&#x27;t do it</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (!use_slab)<br>		BUG_ON(memblock_reserve(addr, new_alloc_size));<br><br>	<span class="hljs-comment">/* Update slab flag */</span><br>	*in_slab = use_slab;<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>主要做的事情是：</p>
+<ul>
+<li>计算出新空间的大小 new_size，为之前的 2 倍</li>
+<li>如果 slab 机制可用，那就用 <code>kmalloc</code> 分配，否则使用 <code>memblock</code> 来分配，我们这里主要讲后者</li>
+<li>如果是 memory 类型的就从 0 开始找，否则就从新分配的 reserved 区域结尾开始找，因为 reserved 区域不能被分配使用，所以跳过。</li>
+<li>调用 <code>memblock_find_in_range</code> 找到合适的空闲区域的首地址</li>
+<li>将旧区域中的内容拷贝到 <code>new_array</code> 中，<code>type-&gt;regions</code> 指向这个新区域，<code>type-&gt;max</code> 也翻倍</li>
+<li>调用 <code>memblock_free</code> 把旧区域的空间释放掉，但是除了静态定义的 <code>memblock_memory_init_regions</code> 和 <code>memblock_reserved_init_regions</code></li>
+<li>因为这块内存是用来存储 memblock 自身的结构的，所以不能被分配使用，所以调用 <code>memblock_reserve</code> 将其添加到 reserved 区域。</li>
+</ul>
+<h3 id="memblock-find-in-range"><a href="#memblock-find-in-range" class="headerlink" title="memblock_find_in_range"></a>memblock_find_in_range</h3><p>它会直接调用 memblock_find_in_range_node 函数</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c">memblock_find_in_range<br>	memblock_find_in_range_node<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * memblock_find_in_range_node - find free area in given range and node</span><br><span class="hljs-comment"> * @size: size of free area to find</span><br><span class="hljs-comment"> * @align: alignment of free area to find</span><br><span class="hljs-comment"> * @start: start of candidate range</span><br><span class="hljs-comment"> * @end: end of candidate range, can be %MEMBLOCK_ALLOC_ANYWHERE or</span><br><span class="hljs-comment"> *       %MEMBLOCK_ALLOC_ACCESSIBLE</span><br><span class="hljs-comment"> * @nid: nid of the free area to find, %NUMA_NO_NODE for any node</span><br><span class="hljs-comment"> * @flags: pick from blocks based on memory attributes</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Find @size free area aligned to @align in the specified range and node.</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * When allocation direction is bottom-up, the @start should be greater</span><br><span class="hljs-comment"> * than the end of the kernel image. Otherwise, it will be trimmed. The</span><br><span class="hljs-comment"> * reason is that we want the bottom-up allocation just near the kernel</span><br><span class="hljs-comment"> * image so it is highly likely that the allocated memory and the kernel</span><br><span class="hljs-comment"> * will reside in the same node.</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * If bottom-up allocation failed, will try to allocate memory top-down.</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Return:</span><br><span class="hljs-comment"> * Found address on success, 0 on failure.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">phys_addr_t</span> __init_memblock <span class="hljs-title function_">memblock_find_in_range_node</span><span class="hljs-params">(<span class="hljs-type">phys_addr_t</span> size,</span><br><span class="hljs-params">					<span class="hljs-type">phys_addr_t</span> align, <span class="hljs-type">phys_addr_t</span> start,</span><br><span class="hljs-params">					<span class="hljs-type">phys_addr_t</span> end, <span class="hljs-type">int</span> nid,</span><br><span class="hljs-params">					<span class="hljs-keyword">enum</span> memblock_flags flags)</span><br>&#123;<br>	<span class="hljs-type">phys_addr_t</span> kernel_end, ret;<br><br>	<span class="hljs-comment">/* pump up @end */</span><br>	<span class="hljs-keyword">if</span> (end == MEMBLOCK_ALLOC_ACCESSIBLE ||<br>	    end == MEMBLOCK_ALLOC_KASAN)<br>		end = memblock.current_limit;<br><br>	<span class="hljs-comment">/* avoid allocating the first page */</span><br>	start = <span class="hljs-type">max_t</span>(<span class="hljs-type">phys_addr_t</span>, start, PAGE_SIZE);<br>	end = max(start, end);<br>	kernel_end = __pa_symbol(_end);<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * try bottom-up allocation only when bottom-up mode</span><br><span class="hljs-comment">	 * is set and @end is above the kernel image.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (memblock_bottom_up() &amp;&amp; end &gt; kernel_end) &#123;<br>		<span class="hljs-type">phys_addr_t</span> bottom_up_start;<br><br>		<span class="hljs-comment">/* make sure we will allocate above the kernel */</span><br>		bottom_up_start = max(start, kernel_end);<br><br>		<span class="hljs-comment">/* ok, try bottom-up allocation first */</span><br>		ret = __memblock_find_range_bottom_up(bottom_up_start, end,<br>						      size, align, nid, flags);<br>		<span class="hljs-keyword">if</span> (ret)<br>			<span class="hljs-keyword">return</span> ret;<br><br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * we always limit bottom-up allocation above the kernel,</span><br><span class="hljs-comment">		 * but top-down allocation doesn&#x27;t have the limit, so</span><br><span class="hljs-comment">		 * retrying top-down allocation may succeed when bottom-up</span><br><span class="hljs-comment">		 * allocation failed.</span><br><span class="hljs-comment">		 *</span><br><span class="hljs-comment">		 * bottom-up allocation is expected to be fail very rarely,</span><br><span class="hljs-comment">		 * so we use WARN_ONCE() here to see the stack trace if</span><br><span class="hljs-comment">		 * fail happens.</span><br><span class="hljs-comment">		 */</span><br>		WARN_ONCE(IS_ENABLED(CONFIG_MEMORY_HOTREMOVE),<br>			  <span class="hljs-string">&quot;memblock: bottom-up allocation failed, memory hotremove may be affected\n&quot;</span>);<br>	&#125;<br><br>	<span class="hljs-keyword">return</span> __memblock_find_range_top_down(start, end, size, align, nid,<br>					      flags);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>主要做的事是：</p>
+<ul>
+<li>寻找范围的最小值不能小于 PAGE_SIZE，可能有特殊用途（后面分析）</li>
+<li>有 <code>bottom to up</code> 和 <code>up to bottom</code> 两种方向寻找空闲区域，我们定义的 <code>memblock.bottom_up = false</code>，所以就从顶向下寻找。我们这里先讲从底向上的寻找方向，反方向的代码基本一样。</li>
+<li>如果是从底向上寻找的话得避开内核映射区域，所以 <code>bottom_up_start</code> 最小不能低于内核映像的结束地址。</li>
+<li>调用 <code>__memblock_find_range_bottom_up</code> 继续寻找</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * __memblock_find_range_bottom_up - find free area utility in bottom-up</span><br><span class="hljs-comment"> * @start: start of candidate range</span><br><span class="hljs-comment"> * @end: end of candidate range, can be %MEMBLOCK_ALLOC_ANYWHERE or</span><br><span class="hljs-comment"> *       %MEMBLOCK_ALLOC_ACCESSIBLE</span><br><span class="hljs-comment"> * @size: size of free area to find</span><br><span class="hljs-comment"> * @align: alignment of free area to find</span><br><span class="hljs-comment"> * @nid: nid of the free area to find, %NUMA_NO_NODE for any node</span><br><span class="hljs-comment"> * @flags: pick from blocks based on memory attributes</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Utility called from memblock_find_in_range_node(), find free area bottom-up.</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Return:</span><br><span class="hljs-comment"> * Found address on success, 0 on failure.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">phys_addr_t</span> __init_memblock<br>__memblock_find_range_bottom_up(<span class="hljs-type">phys_addr_t</span> start, <span class="hljs-type">phys_addr_t</span> end,<br>				<span class="hljs-type">phys_addr_t</span> size, <span class="hljs-type">phys_addr_t</span> align, <span class="hljs-type">int</span> nid,<br>				<span class="hljs-keyword">enum</span> memblock_flags flags)<br>&#123;<br>	<span class="hljs-type">phys_addr_t</span> this_start, this_end, cand;<br>	u64 i;<br><br>	for_each_free_mem_range(i, nid, flags, &amp;this_start, &amp;this_end, <span class="hljs-literal">NULL</span>) &#123;<br>		this_start = clamp(this_start, start, end);<br>		this_end = clamp(this_end, start, end);<br><br>		cand = round_up(this_start, align);<br>		<span class="hljs-keyword">if</span> (cand &lt; this_end &amp;&amp; this_end - cand &gt;= size)<br>			<span class="hljs-keyword">return</span> cand;<br>	&#125;<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这里主要就是一个 <code>for</code> 循环：遍历 memblock 区域，返回一个合适的地址空间，比如 <code>this_start</code> 必须大于内核映像的结束地址 <code>start</code>，这段空间的大小必须要大于需求的 size。</p>
+<p>我们来看这个 <code>for</code> 循环是怎么操作的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * for_each_free_mem_range - iterate through free memblock areas</span><br><span class="hljs-comment"> * @i: u64 used as loop variable</span><br><span class="hljs-comment"> * @nid: node selector, %NUMA_NO_NODE for all nodes</span><br><span class="hljs-comment"> * @flags: pick from blocks based on memory attributes</span><br><span class="hljs-comment"> * @p_start: ptr to phys_addr_t for start address of the range, can be %NULL</span><br><span class="hljs-comment"> * @p_end: ptr to phys_addr_t for end address of the range, can be %NULL</span><br><span class="hljs-comment"> * @p_nid: ptr to int for nid of the range, can be %NULL</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Walks over free (memory &amp;&amp; !reserved) areas of memblock.  Available as</span><br><span class="hljs-comment"> * soon as memblock is initialized.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> for_each_free_mem_range(i, nid, flags, p_start, p_end, p_nid)	\</span><br><span class="hljs-meta">	for_each_mem_range(i, &amp;memblock.memory, &amp;memblock.reserved,	\</span><br><span class="hljs-meta">			   nid, flags, p_start, p_end, p_nid)</span><br><br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * for_each_mem_range - iterate through memblock areas from type_a and not</span><br><span class="hljs-comment"> * included in type_b. Or just type_a if type_b is NULL.</span><br><span class="hljs-comment"> * @i: u64 used as loop variable</span><br><span class="hljs-comment"> * @type_a: ptr to memblock_type to iterate</span><br><span class="hljs-comment"> * @type_b: ptr to memblock_type which excludes from the iteration</span><br><span class="hljs-comment"> * @nid: node selector, %NUMA_NO_NODE for all nodes</span><br><span class="hljs-comment"> * @flags: pick from blocks based on memory attributes</span><br><span class="hljs-comment"> * @p_start: ptr to phys_addr_t for start address of the range, can be %NULL</span><br><span class="hljs-comment"> * @p_end: ptr to phys_addr_t for end address of the range, can be %NULL</span><br><span class="hljs-comment"> * @p_nid: ptr to int for nid of the range, can be %NULL</span><br><span class="hljs-comment"> */</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> for_each_mem_range(i, type_a, type_b, nid, flags,		\</span><br><span class="hljs-meta">			   p_start, p_end, p_nid)			\</span><br><span class="hljs-meta">	for (i = 0, __next_mem_range(&amp;i, nid, flags, type_a, type_b,	\</span><br><span class="hljs-meta">				     p_start, p_end, p_nid);		\</span><br><span class="hljs-meta">	     i != (u64)ULLONG_MAX;					\</span><br><span class="hljs-meta">	     __next_mem_range(&amp;i, nid, flags, type_a, type_b,		\</span><br><span class="hljs-meta">			      p_start, p_end, p_nid))</span><br></code></pre></td></tr></table></figure>
+
+<p>最终调用的是 <code>for_each_mem_range</code> 宏，从注释可以看出其用途：</p>
+<ul>
+<li>遍历 <code>type_a</code> 中不包括 <code>type_b</code> 的 memblock 区域</li>
+<li>如果 <code>type_b</code> 为 <code>NULL</code>，直接遍历 <code>type_a</code> 的 memblock 区域</li>
+<li>如果 <code>type_a</code> 为 <code>NULL</code>，直接遍历 <code>type_b</code> 的 memblock 区域</li>
+</ul>
+<p>我们这里是第一种情况，遍历 memory 类型中不包括 reserved 类型的区域，来看 <code>__next_mem_range</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * __next__mem_range - next function for for_each_free_mem_range() etc.</span><br><span class="hljs-comment"> * @idx: pointer to u64 loop variable</span><br><span class="hljs-comment"> * @nid: node selector, %NUMA_NO_NODE for all nodes</span><br><span class="hljs-comment"> * @flags: pick from blocks based on memory attributes</span><br><span class="hljs-comment"> * @type_a: pointer to memblock_type from where the range is taken</span><br><span class="hljs-comment"> * @type_b: pointer to memblock_type which excludes memory from being taken</span><br><span class="hljs-comment"> * @out_start: ptr to phys_addr_t for start address of the range, can be %NULL</span><br><span class="hljs-comment"> * @out_end: ptr to phys_addr_t for end address of the range, can be %NULL</span><br><span class="hljs-comment"> * @out_nid: ptr to int for nid of the range, can be %NULL</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * Find the first area from *@idx which matches @nid, fill the out</span><br><span class="hljs-comment"> * parameters, and update *@idx for the next iteration.  The lower 32bit of</span><br><span class="hljs-comment"> * *@idx contains index into type_a and the upper 32bit indexes the</span><br><span class="hljs-comment"> * areas before each region in type_b.	For example, if type_b regions</span><br><span class="hljs-comment"> * look like the following,</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> *	0:[0-16), 1:[32-48), 2:[128-130)</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * The upper 32bit indexes the following regions.</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> *	0:[0-0), 1:[16-32), 2:[48-128), 3:[130-MAX)</span><br><span class="hljs-comment"> *</span><br><span class="hljs-comment"> * As both region arrays are sorted, the function advances the two indices</span><br><span class="hljs-comment"> * in lockstep and returns each intersection.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">void</span> __init_memblock __next_mem_range(u64 *idx, <span class="hljs-type">int</span> nid,<br>				      <span class="hljs-keyword">enum</span> memblock_flags flags,<br>				      <span class="hljs-keyword">struct</span> memblock_type *type_a,<br>				      <span class="hljs-keyword">struct</span> memblock_type *type_b,<br>				      <span class="hljs-type">phys_addr_t</span> *out_start,<br>				      <span class="hljs-type">phys_addr_t</span> *out_end, <span class="hljs-type">int</span> *out_nid)<br>&#123;<br>	<span class="hljs-type">int</span> idx_a = *idx &amp; <span class="hljs-number">0xffffffff</span>;<br>	<span class="hljs-type">int</span> idx_b = *idx &gt;&gt; <span class="hljs-number">32</span>;<br><br>	<span class="hljs-keyword">if</span> (WARN_ONCE(nid == MAX_NUMNODES,<br>	<span class="hljs-string">&quot;Usage of MAX_NUMNODES is deprecated. Use NUMA_NO_NODE instead\n&quot;</span>))<br>		nid = NUMA_NO_NODE;<br><br>	<span class="hljs-keyword">for</span> (; idx_a &lt; type_a-&gt;cnt; idx_a++) &#123;<br>		<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> *<span class="hljs-title">m</span> =</span> &amp;type_a-&gt;regions[idx_a];<br><br>		<span class="hljs-type">phys_addr_t</span> m_start = m-&gt;base;<br>		<span class="hljs-type">phys_addr_t</span> m_end = m-&gt;base + m-&gt;size;<br>		<span class="hljs-type">int</span>	    m_nid = memblock_get_region_node(m);<br><br>		<span class="hljs-comment">/* only memory regions are associated with nodes, check it */</span><br>		<span class="hljs-keyword">if</span> (nid != NUMA_NO_NODE &amp;&amp; nid != m_nid)<br>			<span class="hljs-keyword">continue</span>;<br><br>		<span class="hljs-comment">/* skip hotpluggable memory regions if needed */</span><br>		<span class="hljs-keyword">if</span> (movable_node_is_enabled() &amp;&amp; memblock_is_hotpluggable(m))<br>			<span class="hljs-keyword">continue</span>;<br><br>		<span class="hljs-comment">/* if we want mirror memory skip non-mirror memory regions */</span><br>		<span class="hljs-keyword">if</span> ((flags &amp; MEMBLOCK_MIRROR) &amp;&amp; !memblock_is_mirror(m))<br>			<span class="hljs-keyword">continue</span>;<br><br>		<span class="hljs-comment">/* skip nomap memory unless we were asked for it explicitly */</span><br>		<span class="hljs-keyword">if</span> (!(flags &amp; MEMBLOCK_NOMAP) &amp;&amp; memblock_is_nomap(m))<br>			<span class="hljs-keyword">continue</span>;<br><br>		<span class="hljs-keyword">if</span> (!type_b) &#123;<br>			<span class="hljs-keyword">if</span> (out_start)<br>				*out_start = m_start;<br>			<span class="hljs-keyword">if</span> (out_end)<br>				*out_end = m_end;<br>			<span class="hljs-keyword">if</span> (out_nid)<br>				*out_nid = m_nid;<br>			idx_a++;<br>			*idx = (u32)idx_a | (u64)idx_b &lt;&lt; <span class="hljs-number">32</span>;<br>			<span class="hljs-keyword">return</span>;<br>		&#125;<br><br>		<span class="hljs-comment">/* scan areas before each reservation */</span><br>		<span class="hljs-keyword">for</span> (; idx_b &lt; type_b-&gt;cnt + <span class="hljs-number">1</span>; idx_b++) &#123;<br>			<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> *<span class="hljs-title">r</span>;</span><br>			<span class="hljs-type">phys_addr_t</span> r_start;<br>			<span class="hljs-type">phys_addr_t</span> r_end;<br><br>			r = &amp;type_b-&gt;regions[idx_b];<br>			r_start = idx_b ? r[<span class="hljs-number">-1</span>].base + r[<span class="hljs-number">-1</span>].size : <span class="hljs-number">0</span>;<br>			r_end = idx_b &lt; type_b-&gt;cnt ?<br>				r-&gt;base : PHYS_ADDR_MAX;<br><br>			<span class="hljs-comment">/*</span><br><span class="hljs-comment">			 * if idx_b advanced past idx_a,</span><br><span class="hljs-comment">			 * break out to advance idx_a</span><br><span class="hljs-comment">			 */</span><br>			<span class="hljs-keyword">if</span> (r_start &gt;= m_end)<br>				<span class="hljs-keyword">break</span>;<br>			<span class="hljs-comment">/* if the two regions intersect, we&#x27;re done */</span><br>			<span class="hljs-keyword">if</span> (m_start &lt; r_end) &#123;<br>				<span class="hljs-keyword">if</span> (out_start)<br>					*out_start =<br>						max(m_start, r_start);<br>				<span class="hljs-keyword">if</span> (out_end)<br>					*out_end = min(m_end, r_end);<br>				<span class="hljs-keyword">if</span> (out_nid)<br>					*out_nid = m_nid;<br>				<span class="hljs-comment">/*</span><br><span class="hljs-comment">				 * The region which ends first is</span><br><span class="hljs-comment">				 * advanced for the next iteration.</span><br><span class="hljs-comment">				 */</span><br>				<span class="hljs-keyword">if</span> (m_end &lt;= r_end)<br>					idx_a++;<br>				<span class="hljs-keyword">else</span><br>					idx_b++;<br>				*idx = (u32)idx_a | (u64)idx_b &lt;&lt; <span class="hljs-number">32</span>;<br>				<span class="hljs-keyword">return</span>;<br>			&#125;<br>		&#125;<br>	&#125;<br><br>	<span class="hljs-comment">/* signal end of iteration */</span><br>	*idx = ULLONG_MAX;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<ul>
+<li><code>idx</code> 整合了两个类型的索引值，低 32 位位 <code>type_a</code> 的，高 32 位为 <code>type_b</code> 的</li>
+<li>有两层循环，外层为 <code>type_a</code>，内层为 <code>type_b</code>，也就是每一次的 <code>type_a</code>，都要遍历所有的 <code>type_b</code> 区域，比如 <code>type_a</code> 的 <code>regions[0]</code> 不包含 <code>type_b</code> 的 <code>regions[0]</code>，但有可能包含 <code>regions[1]</code> 呀。<ul>
+<li>如果 <code>type_b</code> 为 NULL，就直接返回 <code>type_a</code> 的某个区域的 start 和 end 了</li>
+<li>如果<code>type_b</code> 不为 NULL，就要遍历 <code>type_b</code> 了，我们这里加入 <code>type_a</code> 为 memory，<code>type_b</code> 为 reserved ，找空闲区域的逻辑是这样的：memory 类型为可用内存，因此先要从这里面找，但是 memory 类型的区域中是包含了 reserved 的区域的（比如从设备树中获取到系统内存范围是包含了预留内存的，并且是直接添加到 memory 类型中的），所以要从中排除 reserved 部分。换句话说就是 memory 区域和非 reserved 区域的交集。我们画其中一种有交集的情况：</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310141255012.png" srcset="/img/loading.gif" lazyload alt="image-20231014125459860"></p>
+<p>​		可以看到非 reserved 区域就是相邻区域之间的空间，因为 <code>regions[0]</code> 前面的空间也没人用，所以先		遍历它，最终的空闲区就是 <code>mstart</code> ~ <code>rend_2</code>。</p>
+<ul>
+<li>特别说一下代码中 <code>r[-1].base + r[-1].size</code> 的使用，这里的 -1 就表示上一个索引。</li>
+</ul>
+<h3 id="memblock-phys-alloc"><a href="#memblock-phys-alloc" class="headerlink" title="memblock_phys_alloc"></a>memblock_phys_alloc</h3><p>最终会调用 <code>memblock_find_in_range_node</code> 来找一块合适的内存区域，返回的是物理地址，前面讲过了，调用路径为：</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs asciidoc">memblock<span class="hljs-emphasis">_phys_alloc</span><br><span class="hljs-emphasis">	memblock_alloc_base</span><br><span class="hljs-emphasis">		__memblock_alloc_base</span><br><span class="hljs-emphasis">			memblock_alloc_base_nid</span><br><span class="hljs-emphasis">				memblock_find_in_range_</span>node<br></code></pre></td></tr></table></figure>
+
+<h3 id="memblock-alloc"><a href="#memblock-alloc" class="headerlink" title="memblock_alloc"></a>memblock_alloc</h3><p>最终会调用 <code>memblock_find_in_range_node</code> 来找一块合适的内存区域，返回的是虚拟地址，前面讲过了，调用路径为：</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs asciidoc">memblock<span class="hljs-emphasis">_alloc</span><br><span class="hljs-emphasis">	memblock_alloc_try_nid</span><br><span class="hljs-emphasis">		memblock_alloc_internal</span><br><span class="hljs-emphasis">			memblock_find_in_range_</span>node<br></code></pre></td></tr></table></figure>
+
+<h2 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h2><p>memblock 静态定义了一个全局的 <code>memblock</code> 结构</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs c"><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock</span> <span class="hljs-title">memblock</span> __<span class="hljs-title">initdata_memblock</span> =</span> &#123;<br>	.memory.regions		= memblock_memory_init_regions,<br>	.memory.cnt		= <span class="hljs-number">1</span>,	<span class="hljs-comment">/* empty dummy entry */</span><br>	.memory.max		= INIT_MEMBLOCK_REGIONS,<br>	.memory.name		= <span class="hljs-string">&quot;memory&quot;</span>,<br><br>	.reserved.regions	= memblock_reserved_init_regions,<br>	.reserved.cnt		= <span class="hljs-number">1</span>,	<span class="hljs-comment">/* empty dummy entry */</span><br>	.reserved.max		= INIT_MEMBLOCK_RESERVED_REGIONS,<br>	.reserved.name		= <span class="hljs-string">&quot;reserved&quot;</span>,<br><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_HAVE_MEMBLOCK_PHYS_MAP</span><br>	.physmem.regions	= memblock_physmem_init_regions,<br>	.physmem.cnt		= <span class="hljs-number">1</span>,	<span class="hljs-comment">/* empty dummy entry */</span><br>	.physmem.max		= INIT_PHYSMEM_REGIONS,<br>	.physmem.name		= <span class="hljs-string">&quot;physmem&quot;</span>,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br>	.bottom_up		= <span class="hljs-literal">false</span>,<br>	.current_limit		= MEMBLOCK_ALLOC_ANYWHERE,<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>可以看到定义了两种类型（<code>physmem</code> 类型先不管）</p>
+<ul>
+<li><p><code>memory</code>：可被分配使用的内存</p>
+<ul>
+<li><p><code>regions</code>：<code>memblock_memory_init_regions</code> 数组，大小为 <code>INIT_MEMBLOCK_REGIONS</code> ，即 128，都是静态定义的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> <span class="hljs-title">memblock_memory_init_regions</span>[<span class="hljs-title">INIT_MEMBLOCK_REGIONS</span>] __<span class="hljs-title">initdata_memblock</span>;</span><br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> INIT_MEMBLOCK_REGIONS			128</span><br></code></pre></td></tr></table></figure>
+</li>
+<li><p><code>cnt</code>：1，表示为空</p>
+</li>
+<li><p><code>max</code>：<code>INIT_MEMBLOCK_REGIONS</code>，其实就是数组大小</p>
+</li>
+<li><p><code>name</code>：memory</p>
+</li>
+</ul>
+</li>
+<li><p><code>reserved</code>：预留的内存，不能被分配使用，因为已经被使用或者后面有特殊地方要用</p>
+<ul>
+<li><p><code>regions</code>：<code>memblock_reserved_init_regions</code> 数组，大小为 <code>INIT_MEMBLOCK_RESERVED_REGIONS</code> ，即 128，都是静态定义的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">memblock_region</span> <span class="hljs-title">memblock_reserved_init_regions</span>[<span class="hljs-title">INIT_MEMBLOCK_RESERVED_REGIONS</span>] __<span class="hljs-title">initdata_memblock</span>;</span><br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> INIT_MEMBLOCK_REGIONS			128</span><br><br><span class="hljs-meta">#<span class="hljs-keyword">ifndef</span> INIT_MEMBLOCK_RESERVED_REGIONS</span><br><span class="hljs-meta"># <span class="hljs-keyword">define</span> INIT_MEMBLOCK_RESERVED_REGIONS		INIT_MEMBLOCK_REGIONS</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br></code></pre></td></tr></table></figure>
+</li>
+<li><p><code>cnt</code>：1，表示为空</p>
+</li>
+<li><p><code>max</code>：<code>INIT_MEMBLOCK_RESERVED_REGIONS</code>，其实就是数组大小</p>
+</li>
+<li><p><code>name</code>：reserved</p>
+</li>
+</ul>
+</li>
+<li><p><code>bottom_up</code>：fasle，表示是从上到底</p>
+</li>
+<li><p><code>current_limit</code>：memblock 可以管理的内存上限为 <code>MEMBLOCK_ALLOC_ANYWHERE</code>，即无穷大</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> MEMBLOCK_ALLOC_ANYWHERE	(~(phys_addr_t)0)</span><br></code></pre></td></tr></table></figure></li>
+</ul>
+<h3 id="添加内存区域"><a href="#添加内存区域" class="headerlink" title="添加内存区域"></a>添加内存区域</h3><p>我们以函数调用顺序来查看</p>
+<h4 id="DTS-内存空间预留"><a href="#DTS-内存空间预留" class="headerlink" title="DTS 内存空间预留"></a>DTS 内存空间预留</h4><p>在设备树被解析出来之前得先把这段内存预留，因此添加到 memblock 的 reserve 区域中，调用路径为：</p>
+<figure class="highlight reasonml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs reasonml">start_kernel<br>	setup_arch<br>		setup<span class="hljs-constructor">_machine_fdt(<span class="hljs-params">__fdt_pointer</span>)</span><br>			fixmap<span class="hljs-constructor">_remap_fdt(<span class="hljs-params">__fdt_pointer</span>)</span><br>				memblock<span class="hljs-constructor">_reserve(<span class="hljs-params">__fdt_pointer</span>, <span class="hljs-params">size</span>)</span><br></code></pre></td></tr></table></figure>
+
+<p>qemu 中 DTS 预留内存空间范围为 0x0000000048000000-0x00000000480fffff， 大小为 1MB</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] memblock_reserve: [<span class="hljs-number">0x0000000048000000</span><span class="hljs-number">-0x00000000480fffff</span>] fixmap_remap_fdt+<span class="hljs-number">0x6ec</span>/<span class="hljs-number">0x720</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="获取内存大小"><a href="#获取内存大小" class="headerlink" title="获取内存大小"></a>获取内存大小</h4><p>目前基本都是从设备树中获取内存大小，设备树中需要将内存大小写到 <code>device_type</code> 为 <code>memory</code> 的节点中，如</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c">memory@<span class="hljs-number">40000000</span> &#123;<br>        device_type = <span class="hljs-string">&quot;memory&quot;</span>;<br>        reg = &lt;<span class="hljs-number">0x40000000</span> <span class="hljs-number">0x40000000</span>&gt;;<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>起始地址为 0x40000000， 大小为 0x40000000，即 1GB。</p>
+<p>获取的路径为</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c">start_kernel<br>	setup_arch<br>		setup_machine_fdt<br>			early_init_dt_scan<br>				early_init_dt_scan_nodes<br>					<span class="hljs-title function_">of_scan_flat_dt</span><span class="hljs-params">(early_init_dt_scan_memory, <span class="hljs-literal">NULL</span>)</span>;<br>						early_init_dt_scan_memory<br>							early_init_dt_add_memory_arch<br>								memblock_add<br></code></pre></td></tr></table></figure>
+
+<p>可以看到最终会调用 <code>memblock_add</code> 来将系统内存添加到 memblock region 中。</p>
+<p>我们可以通过命令行参数 <code>memblock = debug</code> 打开相关 log，可以查看 region 中的值，方便理解。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] memblock_add: [<span class="hljs-number">0x0000000040000000</span><span class="hljs-number">-0x000000007fffffff</span>] early_init_dt_add_memory_arch+<span class="hljs-number">0x12c</span>/<span class="hljs-number">0x134</span><br></code></pre></td></tr></table></figure>
+
+<p>可以看出像 memory 类型中添加了一个 1GB 的区域。</p>
+<h4 id="arm64-memblock-init"><a href="#arm64-memblock-init" class="headerlink" title="arm64_memblock_init"></a>arm64_memblock_init</h4><p>调用路径为：</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs asciidoc">start<span class="hljs-emphasis">_kernel</span><br><span class="hljs-emphasis">	setup_arch</span><br><span class="hljs-emphasis">		arm64_memblock_</span>init<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> __init <span class="hljs-title function_">arm64_memblock_init</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-type">const</span> s64 linear_region_size = -(s64)PAGE_OFFSET;<br><br>	<span class="hljs-comment">/* Handle linux,usable-memory-range property */</span><br>	fdt_enforce_memory_region();<br><br>	<span class="hljs-comment">/* Remove memory above our supported physical address size */</span><br>	memblock_remove(<span class="hljs-number">1ULL</span> &lt;&lt; PHYS_MASK_SHIFT, ULLONG_MAX);<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Ensure that the linear region takes up exactly half of the kernel</span><br><span class="hljs-comment">	 * virtual address space. This way, we can distinguish a linear address</span><br><span class="hljs-comment">	 * from a kernel/module/vmalloc address by testing a single bit.</span><br><span class="hljs-comment">	 */</span><br>	BUILD_BUG_ON(linear_region_size != BIT(VA_BITS - <span class="hljs-number">1</span>));<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Select a suitable value for the base of physical memory.</span><br><span class="hljs-comment">	 */</span><br>	memstart_addr = round_down(memblock_start_of_DRAM(),<br>				   ARM64_MEMSTART_ALIGN);<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Remove the memory that we will not be able to cover with the</span><br><span class="hljs-comment">	 * linear mapping. Take care not to clip the kernel which may be</span><br><span class="hljs-comment">	 * high in memory.</span><br><span class="hljs-comment">	 */</span><br>	memblock_remove(<span class="hljs-type">max_t</span>(u64, memstart_addr + linear_region_size,<br>			__pa_symbol(_end)), ULLONG_MAX);<br>	<span class="hljs-keyword">if</span> (memstart_addr + linear_region_size &lt; memblock_end_of_DRAM()) &#123;<br>		<span class="hljs-comment">/* ensure that memstart_addr remains sufficiently aligned */</span><br>		memstart_addr = round_up(memblock_end_of_DRAM() - linear_region_size,<br>					 ARM64_MEMSTART_ALIGN);<br>		memblock_remove(<span class="hljs-number">0</span>, memstart_addr);<br>	&#125;<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Apply the memory limit if it was set. Since the kernel may be loaded</span><br><span class="hljs-comment">	 * high up in memory, add back the kernel region that must be accessible</span><br><span class="hljs-comment">	 * via the linear mapping.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (memory_limit != PHYS_ADDR_MAX) &#123;<br>		memblock_mem_limit_remove_map(memory_limit);<br>		memblock_add(__pa_symbol(_text), (u64)(_end - _text));<br>	&#125;<br><br>	<span class="hljs-keyword">if</span> (IS_ENABLED(CONFIG_BLK_DEV_INITRD) &amp;&amp; phys_initrd_size) &#123;<br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * Add back the memory we just removed if it results in the</span><br><span class="hljs-comment">		 * initrd to become inaccessible via the linear mapping.</span><br><span class="hljs-comment">		 * Otherwise, this is a no-op</span><br><span class="hljs-comment">		 */</span><br>		u64 base = phys_initrd_start &amp; PAGE_MASK;<br>		u64 size = PAGE_ALIGN(phys_initrd_size);<br><br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * We can only add back the initrd memory if we don&#x27;t end up</span><br><span class="hljs-comment">		 * with more memory than we can address via the linear mapping.</span><br><span class="hljs-comment">		 * It is up to the bootloader to position the kernel and the</span><br><span class="hljs-comment">		 * initrd reasonably close to each other (i.e., within 32 GB of</span><br><span class="hljs-comment">		 * each other) so that all granule/#levels combinations can</span><br><span class="hljs-comment">		 * always access both.</span><br><span class="hljs-comment">		 */</span><br>		<span class="hljs-keyword">if</span> (WARN(base &lt; memblock_start_of_DRAM() ||<br>			 base + size &gt; memblock_start_of_DRAM() +<br>				       linear_region_size,<br>			<span class="hljs-string">&quot;initrd not fully accessible via the linear mapping -- please check your bootloader ...\n&quot;</span>)) &#123;<br>			initrd_start = <span class="hljs-number">0</span>;<br>		&#125; <span class="hljs-keyword">else</span> &#123;<br>			memblock_remove(base, size); <span class="hljs-comment">/* clear MEMBLOCK_ flags */</span><br>			memblock_add(base, size);<br>			memblock_reserve(base, size);<br>		&#125;<br>	&#125;<br><br>	<span class="hljs-keyword">if</span> (IS_ENABLED(CONFIG_RANDOMIZE_BASE)) &#123;<br>		<span class="hljs-keyword">extern</span> u16 memstart_offset_seed;<br>		u64 range = linear_region_size -<br>			    (memblock_end_of_DRAM() - memblock_start_of_DRAM());<br><br>		<span class="hljs-comment">/*</span><br><span class="hljs-comment">		 * If the size of the linear region exceeds, by a sufficient</span><br><span class="hljs-comment">		 * margin, the size of the region that the available physical</span><br><span class="hljs-comment">		 * memory spans, randomize the linear region as well.</span><br><span class="hljs-comment">		 */</span><br>		<span class="hljs-keyword">if</span> (memstart_offset_seed &gt; <span class="hljs-number">0</span> &amp;&amp; range &gt;= ARM64_MEMSTART_ALIGN) &#123;<br>			range /= ARM64_MEMSTART_ALIGN;<br>			memstart_addr -= ARM64_MEMSTART_ALIGN *<br>					 ((range * memstart_offset_seed) &gt;&gt; <span class="hljs-number">16</span>);<br>		&#125;<br>	&#125;<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * Register the kernel text, kernel data, initrd, and initial</span><br><span class="hljs-comment">	 * pagetables with memblock.</span><br><span class="hljs-comment">	 */</span><br>	memblock_reserve(__pa_symbol(_text), _end - _text);<br>	<span class="hljs-keyword">if</span> (IS_ENABLED(CONFIG_BLK_DEV_INITRD) &amp;&amp; phys_initrd_size) &#123;<br>		<span class="hljs-comment">/* the generic initrd code expects virtual addresses */</span><br>		initrd_start = __phys_to_virt(phys_initrd_start);<br>		initrd_end = initrd_start + phys_initrd_size;<br>	&#125;<br><br>	early_init_fdt_scan_reserved_mem();<br><br>	<span class="hljs-comment">/* 4GB maximum for 32-bit only capable devices */</span><br>	<span class="hljs-keyword">if</span> (IS_ENABLED(CONFIG_ZONE_DMA32))<br>		arm64_dma_phys_limit = max_zone_dma_phys();<br>	<span class="hljs-keyword">else</span><br>		arm64_dma_phys_limit = PHYS_MASK + <span class="hljs-number">1</span>;<br><br>	reserve_crashkernel();<br><br>	reserve_elfcorehdr();<br><br>	high_memory = __va(memblock_end_of_DRAM() - <span class="hljs-number">1</span>) + <span class="hljs-number">1</span>;<br><br>	dma_contiguous_reserve(arm64_dma_phys_limit);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>主要做的事为：</p>
+<ul>
+<li><p>调用 <code>memblock_remove</code> 移除掉超过支持的最大物理地址（这里是 48 位）的内存区域</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] memblock_remove: [<span class="hljs-number">0x0001000000000000</span><span class="hljs-number">-0x0000fffffffffffe</span>] arm64_memblock_init+<span class="hljs-number">0x58</span>/<span class="hljs-number">0x388</span><br></code></pre></td></tr></table></figure>
+</li>
+<li><p>如果配置了 <code>CONFIG_BLK_DEV_INITRD</code>，即 ramdisk，并且 <code>phys_initrd_size</code> 不为 0，就将其内存空间从 memory 中移除，添加到 reserve 中</p>
+</li>
+<li><p>将内核映像的内存添加到 reserve 中</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] memblock_reserve: [<span class="hljs-number">0x0000000040080000</span><span class="hljs-number">-0x0000000042230fff</span>] arm64_memblock_init+<span class="hljs-number">0x180</span>/<span class="hljs-number">0x388</span><br></code></pre></td></tr></table></figure>
+</li>
+<li><p>扫描设备树中的预留内存，即名为 <code>reserved-memory</code> 的节点，如</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs c">reserved-memory &#123;<br>        <span class="hljs-meta">#address-cells = <span class="hljs-string">&lt;1&gt;</span>;</span><br>        <span class="hljs-meta">#size-cells = <span class="hljs-string">&lt;1&gt;</span>;</span><br>        ranges;<br>  <br>        linux,cma@<span class="hljs-number">80000000</span> &#123;<br>                compatible = <span class="hljs-string">&quot;shared-dma-pool&quot;</span>;<br>                alloc-ranges = &lt;<span class="hljs-number">0x80000000</span> <span class="hljs-number">0x30000000</span>&gt;;<br>                size = &lt;<span class="hljs-number">0x10000000</span>&gt;; <span class="hljs-comment">/* 256MiB */</span><br>                linux,cma-<span class="hljs-keyword">default</span>;<br>                reusable;<br>        &#125;;<br>  <br>        ramoops@bfdf0000 &#123;<br>                compatible = <span class="hljs-string">&quot;ramoops&quot;</span>;<br>                reg = &lt;<span class="hljs-number">0xbfdf0000</span> <span class="hljs-number">0x10000</span>&gt;;     <span class="hljs-comment">/* 64kB */</span><br>                console-size = &lt;<span class="hljs-number">0x8000</span>&gt;;        <span class="hljs-comment">/* 32kB */</span><br>                record-size = &lt;<span class="hljs-number">0x400</span>&gt;;          <span class="hljs-comment">/*  1kB */</span><br>                ecc-size = &lt;<span class="hljs-number">16</span>&gt;;<br>        &#125;;<br>  <br>        trustzone@bfe00000 &#123;<br>                reg = &lt;<span class="hljs-number">0xbfe00000</span> <span class="hljs-number">0x200000</span>&gt;;<br>                no-<span class="hljs-built_in">map</span>;<br>        &#125;;<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<ul>
+<li><p>将有 <code>reg</code> 属性，无 <code>no-map</code> 属性的 <code>reg</code> 内存空间添加到 reserve 区域</p>
+</li>
+<li><p>将有 <code>reg</code> 和 <code>no-map</code> 属性的的 <code>reg</code> 内存空间从 memory 区域中移除</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] memblock_reserve: [<span class="hljs-number">0x000000006fe00000</span><span class="hljs-number">-0x000000007fdfffff</span>] arm64_memblock_init+<span class="hljs-number">0x30c</span>/<span class="hljs-number">0x388</span><br></code></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li><p>如果配置了 <code>CONFIG_ZONE_DMA32</code>，DMA 的物理内存上限 <code>arm64_dma_phys_limit</code> 为 4GB，否则 48 位物理地址最大值</p>
+</li>
+<li><p>预留 <code>crashkernel</code> 内存，其大小一般通过 <code>cmdline</code> 传递，如 <code>crashkernel=256M</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] crashkernel reserved: <span class="hljs-number">0x000000006fe00000</span> - <span class="hljs-number">0x000000007fe00000</span> (<span class="hljs-number">256</span> MB)<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>预留 <code>elfcorehdr</code> 内存，一般定义在设备的 <code>chosen</code> 节点中</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c">&#123;<br>        chosen &#123;<br>                linux,elfcorehdr = &lt;<span class="hljs-number">0x9</span> <span class="hljs-number">0xfffff000</span> <span class="hljs-number">0x0</span> <span class="hljs-number">0x800</span>&gt;;<br>        &#125;;<br>&#125;;<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>记录物理地址最大值到 <code>high_memory</code> 中</p>
+</li>
+<li><p>预留用户需要的连续的物理内存区域，即 CMA，提供 CMA 范围有两种方式：<code>cmdline</code> 和 <code>dts</code>，而这里的 <code>dma_contiguous_reserve</code> 只有在命令行中有传入 <code>cma=xxx</code> 才会有效且在 reserve 中预留内存。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] memblock_reserve: [<span class="hljs-number">0x000000006bc00000</span><span class="hljs-number">-0x000000006fbfffff</span>] memblock_alloc_range_nid+<span class="hljs-number">0x78</span>/<span class="hljs-number">0xb0</span><br>[    <span class="hljs-number">0.000000</span>] cma: Reserved <span class="hljs-number">64</span> MiB at <span class="hljs-number">0x000000006bc00000</span><br></code></pre></td></tr></table></figure></li>
+</ul>
+<p>至此，memblock 模块已经通过构建了整个系统的内存全貌：哪些是 memory 区域，哪些是 reserve 区域。最终在 <code>bootmem_init</code> 中调用 <code>memblock_dump_all</code> 打印出 memblock 的全貌。</p>
+<p><img src="C:/Users/Mi/AppData/Roaming/Typora/typora-user-images/image-20231014165112248.png" srcset="/img/loading.gif" lazyload alt="image-20231014165112248"></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c">[    <span class="hljs-number">0.000000</span>] MEMBLOCK configuration:<br>[    <span class="hljs-number">0.000000</span>]  memory size = <span class="hljs-number">0x0000000040000000</span> reserved size = <span class="hljs-number">0x00000000174bb634</span><br>[    <span class="hljs-number">0.000000</span>]  memory.cnt  = <span class="hljs-number">0x1</span><br>[    <span class="hljs-number">0.000000</span>]  memory[<span class="hljs-number">0x0</span>]     [<span class="hljs-number">0x0000000040000000</span><span class="hljs-number">-0x000000007fffffff</span>], <span class="hljs-number">0x0000000040000000</span> bytes on node <span class="hljs-number">0</span> flags: <span class="hljs-number">0x0</span><br>[    <span class="hljs-number">0.000000</span>]  reserved.cnt  = <span class="hljs-number">0x8</span><br>[    <span class="hljs-number">0.000000</span>]  reserved[<span class="hljs-number">0x0</span>]   [<span class="hljs-number">0x0000000040080000</span><span class="hljs-number">-0x000000004222bfff</span>], <span class="hljs-number">0x00000000021ac000</span> bytes flags: <span class="hljs-number">0x0</span><br>[    <span class="hljs-number">0.000000</span>]  reserved[<span class="hljs-number">0x1</span>]   [<span class="hljs-number">0x0000000048000000</span><span class="hljs-number">-0x00000000480fffff</span>], <span class="hljs-number">0x0000000000100000</span> bytes flags: <span class="hljs-number">0x0</span><br>[    <span class="hljs-number">0.000000</span>]  reserved[<span class="hljs-number">0x2</span>]   [<span class="hljs-number">0x000000006ac00000</span><span class="hljs-number">-0x000000006fbfffff</span>], <span class="hljs-number">0x0000000005000000</span> bytes flags: <span class="hljs-number">0x0</span><br>[    <span class="hljs-number">0.000000</span>]  reserved[<span class="hljs-number">0x3</span>]   [<span class="hljs-number">0x000000006fdef000</span><span class="hljs-number">-0x000000006fdf0fff</span>], <span class="hljs-number">0x0000000000002000</span> bytes flags: <span class="hljs-number">0x0</span><br>[    <span class="hljs-number">0.000000</span>]  reserved[<span class="hljs-number">0x4</span>]   [<span class="hljs-number">0x000000006fdf1ac0</span><span class="hljs-number">-0x000000006fdf727f</span>], <span class="hljs-number">0x00000000000057c0</span> bytes flags: <span class="hljs-number">0x0</span><br>[    <span class="hljs-number">0.000000</span>]  reserved[<span class="hljs-number">0x5</span>]   [<span class="hljs-number">0x000000006fdf7298</span><span class="hljs-number">-0x000000006fdffffb</span>], <span class="hljs-number">0x0000000000008d64</span> bytes flags: <span class="hljs-number">0x0</span><br>[    <span class="hljs-number">0.000000</span>]  reserved[<span class="hljs-number">0x6</span>]   [<span class="hljs-number">0x000000006fe00000</span><span class="hljs-number">-0x000000007fe0100f</span>], <span class="hljs-number">0x0000000010001010</span> bytes flags: <span class="hljs-number">0x0</span><br>[    <span class="hljs-number">0.000000</span>]  reserved[<span class="hljs-number">0x7</span>]   [<span class="hljs-number">0x000000007fe01f00</span><span class="hljs-number">-0x000000007fffffff</span>], <span class="hljs-number">0x00000000001fe100</span> bytes flags: <span class="hljs-number">0x0</span><br></code></pre></td></tr></table></figure>
+
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linux/" class="print-no-link">#Linux</a>
+      
+        <a href="/tags/%E5%86%85%E5%AD%98/" class="print-no-link">#内存</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>memblock 分析</div>
+      <div>http://example.com/2023/10/15/linux/kernel/memory/memblock/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Gao Xiang</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年10月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/10/15/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20using%20the%20generic%20device/" title="Dynamic DMA mapping using the generic device">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Dynamic DMA mapping using the generic device</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/10/15/linux/kernel/memory/arm64%20%E5%86%85%E5%AD%98%E5%88%86%E5%B8%83/" title="ARM64 内存分布">
+                        <span class="hidden-mobile">ARM64 内存分布</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

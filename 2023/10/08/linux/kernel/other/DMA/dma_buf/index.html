@@ -16,12 +16,12 @@
   <meta name="author" content="Gao Xiang">
   <meta name="keywords" content="Linux">
   
-    <meta name="description" content="DMA_BUF 框架">
+    <meta name="description" content="DMA_BUF 框架为什么要引入 dma_buf? 之前的内核中缺少一个可以让不同设备、子系统之间进行内存共享的统一机制  在没有引入 dma_buf 之前内核中不同设备、子系统之间共享数据的方式是什么？  各个 soc 厂商驱动、各种框架和子系统各自实现自己的机制   引入后的优势：  设备间数据共享： dma_buf 主要设计用于在不同设备之间进行零拷贝数据共享。它提供了一个通用的接口，允许多">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Xiaoa&#39;s Blog">
+<meta property="og:title" content="DMA_BUF 框架">
 <meta property="og:url" content="http://example.com/2023/10/08/linux/kernel/other/DMA/dma_buf/index.html">
 <meta property="og:site_name" content="Xiaoa&#39;s Blog">
-<meta property="og:description" content="DMA_BUF 框架">
+<meta property="og:description" content="DMA_BUF 框架为什么要引入 dma_buf? 之前的内核中缺少一个可以让不同设备、子系统之间进行内存共享的统一机制  在没有引入 dma_buf 之前内核中不同设备、子系统之间共享数据的方式是什么？  各个 soc 厂商驱动、各种框架和子系统各自实现自己的机制   引入后的优势：  设备间数据共享： dma_buf 主要设计用于在不同设备之间进行零拷贝数据共享。它提供了一个通用的接口，允许多">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309251800654.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309261520035.png">
@@ -32,15 +32,16 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309262003762.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309271946163.jpg">
 <meta property="article:published_time" content="2023-10-08T10:50:46.454Z">
-<meta property="article:modified_time" content="2023-10-08T15:26:40.870Z">
+<meta property="article:modified_time" content="2023-10-15T14:41:22.568Z">
 <meta property="article:author" content="Gao Xiang">
 <meta property="article:tag" content="Linux">
+<meta property="article:tag" content="DMA">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202309251800654.png">
   
   
   
-  <title>Xiaoa&#39;s Blog</title>
+  <title>DMA_BUF 框架 - Xiaoa&#39;s Blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -245,7 +246,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text=""></span>
+            <span id="subtitle" data-typed-text="DMA_BUF 框架"></span>
           
         </div>
 
@@ -339,13 +340,12 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header"></h1>
+            <h1 id="seo-header">DMA_BUF 框架</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="DMA-BUF-框架"><a href="#DMA-BUF-框架" class="headerlink" title="DMA_BUF 框架"></a>DMA_BUF 框架</h1><span id="more"></span>
-<h2 id="为什么要引入-dma-buf"><a href="#为什么要引入-dma-buf" class="headerlink" title="为什么要引入 dma_buf?"></a>为什么要引入 dma_buf?</h2><ul>
+                <h1 id="DMA-BUF-框架"><a href="#DMA-BUF-框架" class="headerlink" title="DMA_BUF 框架"></a>DMA_BUF 框架</h1><h2 id="为什么要引入-dma-buf"><a href="#为什么要引入-dma-buf" class="headerlink" title="为什么要引入 dma_buf?"></a>为什么要引入 dma_buf?</h2><ul>
 <li><p>之前的内核中缺少一个可以让不同设备、子系统之间进行内存共享的统一机制</p>
 </li>
 <li><p>在没有引入 <code>dma_buf</code> 之前内核中不同设备、子系统之间共享数据的方式是什么？</p>
@@ -652,6 +652,50 @@
             <div>
               <div class="post-metas my-3">
   
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/DMA/" class="category-chain-item">DMA</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linux/" class="print-no-link">#Linux</a>
+      
+        <a href="/tags/DMA/" class="print-no-link">#DMA</a>
+      
+    </div>
   
 </div>
 
@@ -661,7 +705,7 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div></div>
+      <div>DMA_BUF 框架</div>
       <div>http://example.com/2023/10/08/linux/kernel/other/DMA/dma_buf/</div>
     </div>
     <div class="license-meta">
@@ -706,9 +750,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2023/10/08/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20Guide/" title="">
+                      <a href="/2023/10/08/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20Guide/" title="Dynamic DMA mapping Guide">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile"></span>
+                        <span class="hidden-mobile">Dynamic DMA mapping Guide</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -716,8 +760,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/" title="">
-                        <span class="hidden-mobile"></span>
+                      <a href="/2023/10/08/linux/kernel/other/DMA/dma-mapping/" title="dma-mapping API 分析">
+                        <span class="hidden-mobile">dma-mapping API 分析</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
@@ -732,25 +776,6 @@
   
     <article id="comments" lazyload>
       
-  <div class="disqus" style="width:100%">
-    <div id="disqus_thread"></div>
-    
-      <script type="text/javascript">
-        var disqus_config = function() {
-          this.page.url = 'http://example.com/2023/10/08/linux/kernel/other/DMA/dma_buf/';
-          this.page.identifier = '/2023/10/08/linux/kernel/other/DMA/dma_buf/';
-        };
-        Fluid.utils.loadComments('#disqus_thread', function() {
-          var d = document, s = d.createElement('script');
-          s.src = '//' + 'fluid' + '.disqus.com/embed.js';
-          s.setAttribute('data-timestamp', new Date());
-          (d.head || d.body).appendChild(s);
-        });
-      </script>
-    
-    <noscript>Please enable JavaScript to view the comments</noscript>
-  </div>
-
 
     </article>
   

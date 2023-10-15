@@ -18,7 +18,7 @@
   
     <meta name="description" content="内存类型和属性ARMv8 架构提供两种内存类型：  普通内存（NORMAL） 设备内存（DEVICE）  普通内存普通内存（如 RAM、Flash、ROM）是弱一致性的，限制很少，提供了最高的处理器性能。通常代码段、数据段等大部分数据都可以放到普通内存中。处理器可以对普通内存进行重排、重复和合并操作。普通内存可以让处理器做很多硬件优化，如分支预测、数据预取、高速缓存行预取和填充、乱序加载等。 共享">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Xiaoa&#39;s Blog">
+<meta property="og:title" content="内存类型和属性">
 <meta property="og:url" content="http://example.com/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E5%B1%9E%E6%80%A7/index.html">
 <meta property="og:site_name" content="Xiaoa&#39;s Blog">
 <meta property="og:description" content="内存类型和属性ARMv8 架构提供两种内存类型：  普通内存（NORMAL） 设备内存（DEVICE）  普通内存普通内存（如 RAM、Flash、ROM）是弱一致性的，限制很少，提供了最高的处理器性能。通常代码段、数据段等大部分数据都可以放到普通内存中。处理器可以对普通内存进行重排、重复和合并操作。普通内存可以让处理器做很多硬件优化，如分支预测、数据预取、高速缓存行预取和填充、乱序加载等。 共享">
@@ -28,15 +28,16 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310100017957.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310100016201.png">
 <meta property="article:published_time" content="2023-10-10T04:53:36.722Z">
-<meta property="article:modified_time" content="2023-10-10T03:31:06.392Z">
+<meta property="article:modified_time" content="2023-10-15T14:40:24.438Z">
 <meta property="article:author" content="Gao Xiang">
 <meta property="article:tag" content="Linux">
+<meta property="article:tag" content="内存">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310101025653.png">
   
   
   
-  <title>Xiaoa&#39;s Blog</title>
+  <title>内存类型和属性 - Xiaoa&#39;s Blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -241,7 +242,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text=""></span>
+            <span id="subtitle" data-typed-text="内存类型和属性"></span>
           
         </div>
 
@@ -335,7 +336,7 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header"></h1>
+            <h1 id="seo-header">内存类型和属性</h1>
             
             
               <div class="markdown-body">
@@ -511,6 +512,50 @@
             <div>
               <div class="post-metas my-3">
   
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linux/" class="print-no-link">#Linux</a>
+      
+        <a href="/tags/%E5%86%85%E5%AD%98/" class="print-no-link">#内存</a>
+      
+    </div>
   
 </div>
 
@@ -520,7 +565,7 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div></div>
+      <div>内存类型和属性</div>
       <div>http://example.com/2023/10/10/linux/kernel/memory/内存属性/</div>
     </div>
     <div class="license-meta">
@@ -565,9 +610,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2023/10/10/linux/kernel/memory/%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84/" title="">
+                      <a href="/2023/10/10/linux/kernel/memory/%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84/" title="物理内存映射">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile"></span>
+                        <span class="hidden-mobile">物理内存映射</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -575,8 +620,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" title="">
-                        <span class="hidden-mobile"></span>
+                      <a href="/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" title="内存管理数据结构">
+                        <span class="hidden-mobile">内存管理数据结构</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
@@ -591,25 +636,6 @@
   
     <article id="comments" lazyload>
       
-  <div class="disqus" style="width:100%">
-    <div id="disqus_thread"></div>
-    
-      <script type="text/javascript">
-        var disqus_config = function() {
-          this.page.url = 'http://example.com/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E5%B1%9E%E6%80%A7/';
-          this.page.identifier = '/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E5%B1%9E%E6%80%A7/';
-        };
-        Fluid.utils.loadComments('#disqus_thread', function() {
-          var d = document, s = d.createElement('script');
-          s.src = '//' + 'fluid' + '.disqus.com/embed.js';
-          s.setAttribute('data-timestamp', new Date());
-          (d.head || d.body).appendChild(s);
-        });
-      </script>
-    
-    <noscript>Please enable JavaScript to view the comments</noscript>
-  </div>
-
 
     </article>
   

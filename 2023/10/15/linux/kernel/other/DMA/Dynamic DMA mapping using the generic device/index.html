@@ -1,0 +1,953 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Gao Xiang">
+  <meta name="keywords" content="Linux">
+  
+    <meta name="description" content="Dynamic DMA mapping using the generic device这篇文档描述了 DMA API。有关 API 更简洁的介绍（实际例子），可以看 Documentation&#x2F;DMA-API-HOWTO.txt 这篇文档分为两部分，Part I 描述了最基本的 API，Part II 描述了支持非一致性内存机制的扩展。除非你的驱动必须支持非一致性平台（这个通常只有旧的平台才有）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Dynamic DMA mapping using the generic device">
+<meta property="og:url" content="http://example.com/2023/10/15/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20using%20the%20generic%20device/index.html">
+<meta property="og:site_name" content="Xiaoa&#39;s Blog">
+<meta property="og:description" content="Dynamic DMA mapping using the generic device这篇文档描述了 DMA API。有关 API 更简洁的介绍（实际例子），可以看 Documentation&#x2F;DMA-API-HOWTO.txt 这篇文档分为两部分，Part I 描述了最基本的 API，Part II 描述了支持非一致性内存机制的扩展。除非你的驱动必须支持非一致性平台（这个通常只有旧的平台才有）">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-10-15T12:25:35.406Z">
+<meta property="article:modified_time" content="2023-10-15T14:41:49.716Z">
+<meta property="article:author" content="Gao Xiang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="DMA">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>Dynamic DMA mapping using the generic device - Xiaoa&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.5","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"left","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Linux</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/%E6%B2%99%E6%BC%A0.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Dynamic DMA mapping using the generic device"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-10-15 20:25" pubdate>
+          星期日, 十月 15日 2023, 8:25 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          13k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          112 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="padding-left: 2rem; margin-right: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Dynamic DMA mapping using the generic device</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="Dynamic-DMA-mapping-using-the-generic-device"><a href="#Dynamic-DMA-mapping-using-the-generic-device" class="headerlink" title="Dynamic DMA mapping using the generic device"></a>Dynamic DMA mapping using the generic device</h1><p>这篇文档描述了 DMA API。有关 API 更简洁的介绍（实际例子），可以看 <code>Documentation/DMA-API-HOWTO.txt</code></p>
+<p>这篇文档分为两部分，Part I 描述了最基本的 API，Part II 描述了支持非一致性内存机制的扩展。除非你的驱动必须支持非一致性平台（这个通常只有旧的平台才有），否则你应该使用最基本的 API</p>
+<h2 id="DMA-API"><a href="#DMA-API" class="headerlink" title="DMA API"></a>DMA API</h2><p>想要使用 dma API，你必须包含 <code>linux/dma-mapping.h</code>, 这个头文件介绍了 dma 物理地址类型 <code>dma_addr_t</code> 和一些接口。</p>
+<p><code>dma_addr_t</code> 类型可以表示所有平台的有效的 DMA 地址，这个地址可以直接作为外设的 DMA 源地址或 DMA 目标地址。cpu 不能直接使用 <code>dma_addr_t</code> 类型的地址，因为 <code>dma_addr_t</code> 地址空间可能需要转换位物理地址才能被 cpu 看到。</p>
+<h2 id="使用大的-DMA-coherent-buffers"><a href="#使用大的-DMA-coherent-buffers" class="headerlink" title="使用大的 DMA-coherent buffers"></a>使用大的 DMA-coherent buffers</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> *<span class="hljs-title function_">dma_alloc_coherent</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                         <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                         <span class="hljs-type">dma_addr_t</span> *dma_handle, </span><br><span class="hljs-params">                         <span class="hljs-type">gfp_t</span> flag)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>Consistent memory 的意思是 cpu 或 device 写数据后能理解被 device 或 cpu 看到，根本不用担心 cache 的一致性问题。（然而，你可以需要确保在 device 读内存之前要把 cpu 的 buffer 刷到内存中）。</p>
+<p>调用 <code>dma_alloc_coherent</code> 成功后会返回 cpu 侧的虚拟地址，失败后会返回 NULL。</p>
+<p>同时也会返回 DMA 的总线地址到 <code>dma_handle</code>。</p>
+<p>并且调用 <code>dma_alloc_coherent</code> 返回的地址空间最小为 PAGE_SIZE，所以如果你想分配小于 PAGE_SIZE 的地址空间的话，调用 <code>dma_pool</code> 是你最好的选择。</p>
+<p>只有 <code>dma_alloc_coherent</code> 允许调用者指定 <code>flag</code> 参数为 <code>GFP_</code> （参考 <code>kmalloc()</code>，当然可以选择忽略这个标志，如 <code>GFP_DMA</code>）。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">dma_free_coherent</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                       <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                       <span class="hljs-type">void</span> *cpu_addr,</span><br><span class="hljs-params">                       <span class="hljs-type">dma_addr_t</span> dma_handle)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>释放一块之前分配的一致性内存区域，参数 <code>dev</code>、<code>size</code>、<code>dma_handle</code> 必须和之前传给 <code>dma_alloc_coherent()</code> 的一样。<code>cpu_addr</code> 也必须是调用 <code>dma_alloc_coherent()</code> 的返回值。</p>
+<p>需要注意：这个函数不能在中断上下文中调用。</p>
+<h2 id="使用小的-DMA-coherent-buffers"><a href="#使用小的-DMA-coherent-buffers" class="headerlink" title="使用小的 DMA-coherent buffers"></a>使用小的 DMA-coherent buffers</h2><p>想要使用 <code>dma_pool</code>，必须 <code>#include &lt;linux/dmapool.h&gt;</code></p>
+<p>许多驱动需要很多比较小的 DMA 一致性的内存区域，比如 I&#x2F;O buffers 的 DMA 描述符。与其使用  <code>dma_alloc_coherent()</code> 分配以 page 为单位的内存，还不如使用 DMA pools。<code>dma_pool</code> 就像  <code>struct kmem_cache</code> 一样，唯一不同的是 <code>dma_pool</code> 使用 DMA 一致性分配器，而 <code>kmem_cache</code> 使用 <code>__get_free_pages()</code>。同样，他们都有硬件对齐的约束。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">struct</span> dma_pool *<span class="hljs-title function_">dma_pool_create</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span> *name, </span><br><span class="hljs-params">                                 <span class="hljs-keyword">struct</span> device *dev,</span><br><span class="hljs-params">                                 <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                                 <span class="hljs-type">size_t</span> align, </span><br><span class="hljs-params">                                 <span class="hljs-type">size_t</span> alloc)</span>;<br></code></pre></td></tr></table></figure>
+
+<p><code>dma_pool_create()</code>  初始化一个 DMA 一致性 buffer 的池子以供设备使用。它可能会睡眠，所以只能进程上下文中调用。</p>
+<p>参数 <code>name</code> 是为了诊断（像 <code>struct kmem_cache</code> name）；参数 <code>dev</code>  和 <code>size</code> 参数和传给 <code>dma_alloc_coherent()</code> 的一样。参数 <code>align</code> 是为了硬件对齐需求（单位为 bytes，必须是 2 的 指数幂）。如果你的设备没有边界限制，传 0 就可以；如果传 4096，说明这次的内存分配不能超过 4KB 的边界。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> *<span class="hljs-title function_">dma_pool_zalloc</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> dma_pool *pool, </span><br><span class="hljs-params">                      <span class="hljs-type">gfp_t</span> mem_flags,</span><br><span class="hljs-params">                      <span class="hljs-type">dma_addr_t</span> *handle)</span>;<br></code></pre></td></tr></table></figure>
+
+<p><code>dma_pool_zalloc</code> 封装了 <code>dma_pool_alloc()</code> ，如果分配成功，返回的内存区域内数据全为 0</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> *<span class="hljs-title function_">dma_pool_alloc</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> dma_pool *pool, </span><br><span class="hljs-params">                     <span class="hljs-type">gfp_t</span> gfp_flags,</span><br><span class="hljs-params">                     <span class="hljs-type">dma_addr_t</span> *dma_handle)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>调用 <code>dma_pool_alloc</code> 可以从前面创建的池子中返回内存对齐的区间。如果传 <code>GFP_ATOMIC</code> 不会阻塞，传  <code>GFP_KERNEL</code> 可以阻塞（但不能在中断上下文中调用，并且也不能持有 SMP 锁）。跟 <code>dma_alloc_coherent()</code> 一样，也是返回两个值：一个是 cpu 测可访问的虚拟地址，另一个是 device 测可访问的 DMA 总线地址。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">dma_pool_free</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> dma_pool *pool, </span><br><span class="hljs-params">                   <span class="hljs-type">void</span> *vaddr,</span><br><span class="hljs-params">                   <span class="hljs-type">dma_addr_t</span> addr)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>调用 <code>dma_pool_free</code> 将释放内存到池子里。这个 pool 就是之前传给 <code>dma_pool_alloc()</code> 的参数； cpu 虚拟地址（vaddr）和 DMA 地址是之前分配是返回的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">dma_pool_destroy</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> dma_pool *pool)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>调用 <code>dma_pool_destroy()</code> 将释放 pool 资源。它必须在进程上下文中调用（因为可能会睡眠）。同时必须保证在销毁 pool 之前先释放所有的内存到 pool。</p>
+<h2 id="DMA-地址限制"><a href="#DMA-地址限制" class="headerlink" title="DMA 地址限制"></a>DMA 地址限制</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">dma_set_mask_and_coherent</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, u64 mask)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>检查参数 <code>mask</code> 是否有效，如果有效，就更新 streaming 和 coherent DMA mask 参数。</p>
+<p>如果成功，返回 0；如果失败，返回负数。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">dma_set_mask</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, u64 mask)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>检查参数 <code>mask</code> 是否有效，如果有效，就更新 mask 参数。</p>
+<p>如果成功，返回 0；如果失败，返回负数。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">dma_set_coherent_mask</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, u64 mask)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>检查参数 <code>mask</code> 是否有效，如果有效，就更新 mask 参数。</p>
+<p>如果成功，返回 0；如果失败，返回负数。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">u64 <span class="hljs-title function_">dma_get_required_mask</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>这个 API 会返回平台可以正常运行的 mask。通常这意味着返回的掩码是覆盖所有内存所需的最小值。检查所需的掩码使具有可变描述符大小的驱动程序有机会在必要时使用较小的描述符。</p>
+<p>请求所需的掩码不会改变当前的掩码。如果您希望利用它，您应该将请求的值传给 <code>dma set mask()</code>。</p>
+<h2 id="Streaming-DMA-mappings"><a href="#Streaming-DMA-mappings" class="headerlink" title="Streaming DMA mappings"></a>Streaming DMA mappings</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">dma_addr_t</span> <span class="hljs-title function_">dma_map_single</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                          <span class="hljs-type">void</span> *cpu_addr, </span><br><span class="hljs-params">                          <span class="hljs-type">size_t</span> size,</span><br><span class="hljs-params">                          <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>将 cpu 虚拟地址传给 <code>dma_map_single</code>，可以返回 device 侧可以访问的 DMA 地址。</p>
+<p>下面是 DMA 的方向的枚举类型：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c">DMA_NONE		    no <span class="hljs-title function_">direction</span> <span class="hljs-params">(used <span class="hljs-keyword">for</span> debugging)</span><br>DMA_TO_DEVICE		data is going from the memory to the device<br>DMA_FROM_DEVICE		data is coming from the device to the memory<br>DMA_BIDIRECTIONAL	direction isn&#x27;t known<br></code></pre></td></tr></table></figure>
+
+<p><strong>注意</strong>：</p>
+<p>并不是所有的内存区域都可以使用这个 API 来映射的。虚拟内存连续，物理内存不一定连续。如果这个 API 不支持 scatter&#x2F;gather 能力，那使用不连续的物理地址会映射失败。原因是，通过这个 API 映射的内存必须保证是物理连续的（像 <code>kmalloc</code>）。</p>
+<p>此外，DMA 地址也必须在 device 的 <code>dma_mask</code> 范围内（<code>dma_mask</code> 是 device 可以访问的地址空间的位掩码，如果 DMA 地址和 <code>dma_mask</code> 相与等于 DMA 地址，那说明 device 可以操作这个 DMA 地址）。为了保证 <code>kmalloc</code> 分配的内存在 <code>dma_mask</code> 范围内，驱动可以指定各种平台的标志来限制 DMA 地址的范围（如，x86 平台的 GFP_DMA 保证在可用 DMA 地址的前 16MB 内，这是ISA设备所要求的 ）。</p>
+<p>还请注意，如果平台具有 IOMMU (将 I&#x2F;O dma 地址映射到物理内存地址的一个硬件)，则上述对物理连续性和 dma 掩码的限制可能不适用。然而，为了便于移植，设备驱动程序编写者可能不假设存在这样一个 IOMMU。</p>
+<p><strong>警告</strong>：</p>
+<p>内存一致性以称为缓存线宽度的粒度进行操作。为了使这个API映射的内存能够正确运行，映射的区域必须精确地开始于缓存行边界，并精确地结束于缓存行边界（防止两个单独映射的区域共享一个缓存行）。由于在编译时可能不知道缓存行大小，因此API不会强制执行此要求。因此，建议那些在运行时不特别注意确定缓存行大小的驱动程序开发者们只映射在页面边界(也保证是缓存行边界)开始和结束的虚拟区域。</p>
+<p><code>DMA_TO_DEVICE</code> 同步必须在软件最后一次修改内存区域之后，在它被移交给设备之前完成。一旦使用了这个原语，该原语覆盖的内存应该被设备视为只读。如果设备在任何点写内存，那 DMA 应该是双向。</p>
+<p><code>DMA_FROM_DEVICE</code> 同步必须在被设备更改的数据之前完成。</p>
+<p><code>DMA_BIDIRECTIONAL</code> 需要特殊的处理：这意味着驱动程序不确定内存是否会在被移交给设备之前修改，也不确定设备是否也会修改它。因此，你必须始终同步 bidirectional 内存两次：</p>
+<ul>
+<li>一次是在内存移交给设备之前(确保所有最新数据都从 cache 刷新到内存)。</li>
+<li>一次是在数据被设备使用后并且能被 cpu 可以访问之前(确保任何处理器缓存行都更新了设备可能更改的最新数据)。</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">dma_unmap_single</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                 <span class="hljs-type">dma_addr_t</span> dma_addr, </span><br><span class="hljs-params">                 <span class="hljs-type">size_t</span> size,</span><br><span class="hljs-params">                 <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>解除之前映射的区域。所有的参数必须和之前 map 的一样。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">dma_addr_t</span> <span class="hljs-title function_">dma_map_page</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                        <span class="hljs-keyword">struct</span> page *page,</span><br><span class="hljs-params">                        <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> offset, <span class="hljs-type">size_t</span> size,</span><br><span class="hljs-params">                        <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">dma_unmap_page</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                    <span class="hljs-type">dma_addr_t</span> dma_address, </span><br><span class="hljs-params">                    <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                    <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>对于 pages mapping 和 unmapping 的 API 的所有的注意事项和警告同样适用于其他 mapping  API。此外，尽管提供了 <offset> 和 <size> 参数来进行部分页面映射，但建议你还是不要使用这些参数，除非你确实知道缓存宽度是多少。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">dma_addr_t</span> <span class="hljs-title function_">dma_map_resource</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                            <span class="hljs-type">phys_addr_t</span> phys_addr, </span><br><span class="hljs-params">                            <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                            <span class="hljs-keyword">enum</span> dma_data_direction dir, </span><br><span class="hljs-params">                            <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span>;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">dma_unmap_resource</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                        <span class="hljs-type">dma_addr_t</span> addr, </span><br><span class="hljs-params">                        <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                        <span class="hljs-keyword">enum</span> dma_data_direction dir, </span><br><span class="hljs-params">                        <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>用于 MMIO 资源 mapping 和 unmapping 的 API。对于其他 mappping API，所有注意事项和警告也同样使用。这些 API 应该只用于映射设备 MMIO 资源，不允许映射 RAM。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">dma_mapping_error</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, <span class="hljs-type">dma_addr_t</span> dma_addr)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>在某些情况下，<code>dma_map_single()</code>, <code>dma_map_page()</code> 和<code>dma_map_resource()</code>会映射失败。驱动可以通过调用  <code>dma_mapping_error()</code> 来检查返回的 DMA 地址。返回非 0，表示不能创建映射，驱动应该采取一些行动处理这种情况（例如减少当前 DMA 映射的使用或者等一会儿再重试)。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">dma_map_sg</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">               <span class="hljs-keyword">struct</span> scatterlist *sg,</span><br><span class="hljs-params">	    	   <span class="hljs-type">int</span> nents, </span><br><span class="hljs-params">               <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>返回值: 映射的 DMA 地址段的数量(如果 scatter&#x2F;gather 列表的一些元素在物理上或实际上是相邻的，并且 IOMMU 将它们映射为单个条目，则可能比传入的 <nents> 短，也就是说两个 scatterlist 的头尾连续，就可以当成一块来处理)。</p>
+<p>请注意，如果已映射过一次，则不能再次映射。映射过程中是可以破坏 sg 中的信息的。</p>
+<p>与其他映射接口一样，<code>dma map sg()</code> 也可能会失败。当失败时返回 0，驱动程序必须采取适当的操作。至关重要的是，驱动程序要做一些事情，在块驱动程序中中止请求甚至关闭的情况下，比什么都不做和损坏文件系统要好的多。</p>
+<p>对于 scatterlists，你可以这样使用返回值来映射：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> i, count = dma_map_sg(dev, sglist, nents, direction);<br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">scatterlist</span> *<span class="hljs-title">sg</span>;</span><br><br>for_each_sg(sglist, sg, count, i) &#123;<br>	hw_address[i] = sg_dma_address(sg);<br>	hw_len[i] = sg_dma_len(sg);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>nents</code> 就是 <code>sglist</code> 中表项的个数。</p>
+<p>该实现可以自由地将几个连续的表项合并为一个表项(例如，使用 IOMMU 或者几个页面恰好在物理上是连续的)，并返回它们映射到的表项的实际数量。失败时返回 0。</p>
+<p>然后，你应该循环 count 次(这可以小于 <code>nents</code>)，然后通过 <code>sg_dma_address</code> 获取物理地址，通过<code>sg_dma_len()</code> 获取长度。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">dma_unmap_sg</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                  <span class="hljs-keyword">struct</span> scatterlist *sg,</span><br><span class="hljs-params">                  <span class="hljs-type">int</span> nents, </span><br><span class="hljs-params">                  <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>unmap 的时候，所有的参数必须和之前 mapping 的一样。</p>
+<p><strong>注意：</strong> <nents> 必须时你 mapping 时传的参数，而不是返回的 count 值。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span><br><span class="hljs-title function_">dma_sync_single_for_cpu</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                        <span class="hljs-type">dma_addr_t</span> dma_handle, </span><br><span class="hljs-params">                        <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                        <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br><br><span class="hljs-type">void</span><br><span class="hljs-title function_">dma_sync_single_for_device</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                           <span class="hljs-type">dma_addr_t</span> dma_handle,</span><br><span class="hljs-params">                           <span class="hljs-type">size_t</span> size，</span><br><span class="hljs-params">                           dma_data_direction direction)</span>;<br><br><span class="hljs-type">void</span><br><span class="hljs-title function_">dma_sync_sg_for_cpu</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                    <span class="hljs-keyword">struct</span> scatterlist *sg,</span><br><span class="hljs-params">                    <span class="hljs-type">int</span> nents,</span><br><span class="hljs-params">                    <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br><br><span class="hljs-type">void</span><br><span class="hljs-title function_">dma_sync_sg_for_device</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                       <span class="hljs-keyword">struct</span> scatterlist *sg,</span><br><span class="hljs-params">                       <span class="hljs-type">int</span> nents,</span><br><span class="hljs-params">                       <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>为 CPU 和设备同步单个连续或 scatter&#x2F;gather 映射。使用 <code>sync_sg</code> API 时，所有参数必须与传入 <code>sync_single</code> API 的参数相同。使用 <code>sync_single</code> API 时，你可以使用与传入 <code>sync_single</code> API 的参数不相同的 <code>dma_handle</code> 和 <code>size</code> 参数来进行部分同步。</p>
+<p><strong>注意</strong>：</p>
+<p>你必须做：</p>
+<ul>
+<li>在读取 DMA 从设备写入的值之前，使用 <code>DMA_FROM_DEVICE</code> </li>
+<li>在写入将使用 DMA 写入设备的值之后，使用 <code>DMA_TO_DEVICE</code></li>
+<li>如果内存是 <code>DMA_BIDIRECTIONAL</code> 的，则在操作内存的前后都要同步</li>
+</ul>
+<p><code>dma map single()</code> 也一样。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">dma_addr_t</span><br><span class="hljs-title function_">dma_map_single_attrs</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                     <span class="hljs-type">void</span> *cpu_addr, </span><br><span class="hljs-params">                     <span class="hljs-type">size_t</span> size,</span><br><span class="hljs-params">                     <span class="hljs-keyword">enum</span> dma_data_direction dir,</span><br><span class="hljs-params">                     <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span>;<br><br><span class="hljs-type">void</span><br><span class="hljs-title function_">dma_unmap_single_attrs</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                       <span class="hljs-type">dma_addr_t</span> dma_addr,</span><br><span class="hljs-params">                       <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                       <span class="hljs-keyword">enum</span> dma_data_direction dir,</span><br><span class="hljs-params">                       <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span>;<br><br><span class="hljs-type">int</span><br><span class="hljs-title function_">dma_map_sg_attrs</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                 <span class="hljs-keyword">struct</span> scatterlist *sgl,</span><br><span class="hljs-params">                 <span class="hljs-type">int</span> nents, </span><br><span class="hljs-params">                 <span class="hljs-keyword">enum</span> dma_data_direction dir,</span><br><span class="hljs-params">                 <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span>;<br><br><span class="hljs-type">void</span><br><span class="hljs-title function_">dma_unmap_sg_attrs</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                   <span class="hljs-keyword">struct</span> scatterlist *sgl,</span><br><span class="hljs-params">                   <span class="hljs-type">int</span> nents, </span><br><span class="hljs-params">                   <span class="hljs-keyword">enum</span> dma_data_direction dir,</span><br><span class="hljs-params">                   <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>上面的四个函数就像没有 attrs 后缀的对应函数一样，只是它们传递了一个可选的 <code>dma_attrs</code>。</p>
+<p>DMA 属性的解释是特定于体系结构的，每个属性都应该记录在 <code>Documentation/DMA-attributes.txt</code>中。</p>
+<p>如果参数 <code>dma_attrs</code> 为 0，上面的每个函数就跟没有 <code>_attrs</code> 后缀的函数一样。比如 <code>dma_map_single_attrs()</code> 对应 <code>dma_map_single()</code>。</p>
+<p>作为使用’ ‘ * attrs ‘ ‘ ‘函数的示例，下面是如何在为 DMA 映射内存时传递属性 <code>DMA_ ATTR_FOO</code>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;linux/dma-mapping.h&gt;</span></span><br><span class="hljs-comment">/* DMA_ATTR_FOO should be defined in linux/dma-mapping.h and</span><br><span class="hljs-comment">* documented in Documentation/DMA-attributes.txt */</span><br>...<br><br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attr;<br>	attr |= DMA_ATTR_FOO;<br>	....<br>	n = dma_map_sg_attrs(dev, sg, nents, DMA_TO_DEVICE, attr);<br>	....<br></code></pre></td></tr></table></figure>
+
+<p>关心 <code>DMA_ATTR_FOO</code> 的架构会在它们的 mapping 和 unmapping 例程的实现中检查它的存在，例如：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">whizco_dma_map_sg_attrs</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, <span class="hljs-type">dma_addr_t</span> dma_addr,</span><br><span class="hljs-params">			     <span class="hljs-type">size_t</span> size, <span class="hljs-keyword">enum</span> dma_data_direction dir,</span><br><span class="hljs-params">			     <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span><br>&#123;<br>	....<br>	<span class="hljs-keyword">if</span> (attrs &amp; DMA_ATTR_FOO)<br>		<span class="hljs-comment">/* twizzle the frobnozzle */</span><br>	....<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="高级的-DMA-使用"><a href="#高级的-DMA-使用" class="headerlink" title="高级的 DMA 使用"></a>高级的 DMA 使用</h2><p>警告: 这部分 DMA API 不应该在大多数情况下使用，因为它们满足不属于常规驱动程序的不太可能的极端情况。</p>
+<p>如果你不知道处理器和 I&#x2F;O 设备之间的缓存一致性的工作原理，那你根本就不应该使用这些 API。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> * <span class="hljs-title function_">dma_alloc_attrs</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                       <span class="hljs-type">size_t</span> size,</span><br><span class="hljs-params">                       <span class="hljs-type">dma_addr_t</span> *dma_handle,</span><br><span class="hljs-params">                       <span class="hljs-type">gfp_t</span> flag, <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>与 <code>dma alloc coherent()</code> 相同，除了在 <code>attrs</code> 参数中传递 <code>DMA_ATTR_NON_CONSISTENT</code>  标志时，平台将根据其认为合适的情况选择返回一致或非一致内存。通过使用这个 API，你可以向平台保证，如果驱动程序选择返回非一致的内存，那么你在驱动程序中要确保该内存的所有正确和必要的同步点。</p>
+<p><strong>注意</strong>:在平台可以返回一致性内存的地方，它将保证同步点成为 nops。</p>
+<p><strong>警告</strong>:处理非一致内存确实很麻烦。只有当你确实知道驱动程序需要在一种罕见的(通常是非 PCI)架构上工作，而这种架构根本无法产生一致性的内存时，你才应该使用这个 API。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">dma_free_attrs</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                    <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                    <span class="hljs-type">void</span> *cpu_addr,</span><br><span class="hljs-params">					<span class="hljs-type">dma_addr_t</span> dma_handle, </span><br><span class="hljs-params">                    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> attrs)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>释放由 <code>dma_alloc_attrs()</code> 分配的内存。所有的公共的参数必须和 <code>dma_free_coherent</code> 一样，而 attrs 参数必须和 <code>dma_alloc_attrs()</code> 一样。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">dma_get_cache_alignment</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>返回处理器缓存对齐。这是在映射内存或执行部分刷新时必须观察到的绝对最小对齐和宽度。</p>
+<p><strong>注意</strong>：</p>
+<blockquote>
+<p>此 API 可能返回一个比实际缓存行大的数字，但它将返回一个或多个缓存行宽度。它也将始终是2的幂次方，以便于对齐。</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">dma_cache_sync</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                    <span class="hljs-type">void</span> *vaddr, </span><br><span class="hljs-params">                    <span class="hljs-type">size_t</span> size,</span><br><span class="hljs-params">                    <span class="hljs-keyword">enum</span> dma_data_direction direction)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>对使用 <code>DMA_ATTR_NON_CONSISTENT</code> 标志，由 <code>dma alloc attrs()</code> 分配的内存进行部分同步，从虚拟地址 <code>vaddr</code> 开始，大小为 <code>size</code>。同样，在执行此操作时，你必须观察缓存行的边界。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">dma_declare_coherent_memory</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, </span><br><span class="hljs-params">                                <span class="hljs-type">phys_addr_t</span> phys_addr,</span><br><span class="hljs-params">                                <span class="hljs-type">dma_addr_t</span> device_addr, </span><br><span class="hljs-params">                                <span class="hljs-type">size_t</span> size, </span><br><span class="hljs-params">                                <span class="hljs-type">int</span> flags)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>声明由 <code>dma alloc coherent()</code> 在为该设备请求一致性内存时分配的内存区域。</p>
+<p><code>phys_addr</code>  是当前分配的物理内存（它将 <code>ioremap</code> 为 cpu 可以访问的虚拟内存区域）</p>
+<p><code>device_addr</code> 是设备需要被编程来实际寻址该内存的 DMA 地址(这将作为 <code>dma_alloc_coherent()</code> 的 <code>dma_addr_t</code> 参数)。</p>
+<p><code>size</code> 是那个区域的大小（必须是 PAGE_SIZE 的倍数）</p>
+<p><code>flags</code> 可以组合在一起：</p>
+<ul>
+<li><code>DMA_MEMORY_EXCLUSIVE</code> - 只从声明的区域分配内存。当在声明的区域中分配不到内存时，不允许 <code>dma alloc coherent()</code> 分配其他系统内存。</li>
+</ul>
+<p>作为平台的简化，每个设备只能声明一个这样的内存区域。</p>
+<p>出于效率的考虑，大多数平台选择仅在页面的粒度上跟踪声明的区域。对于较小的分配，您应该使用 <code>dma_pool()</code> 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">dma_release_declared_memory</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>移除之前声明的内存区域。此 API 对该区域不执行是否在使用中的检查，并将无条件返回删除所有所需结构。确定内存区域目前是否被使用是驱动工程师的职责。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> * <span class="hljs-title function_">dma_mark_declared_memory_occupied</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev,</span><br><span class="hljs-params">                                         <span class="hljs-type">dma_addr_t</span> device_addr, </span><br><span class="hljs-params">                                         <span class="hljs-type">size_t</span> size)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>这用于占用声明空间的特定区域(<code>dma alloc coherent()</code>将分发找到的第一个空闲区域)。</p>
+<p><code>device_addr</code> 是像那个区域请求的 DMA 地址.</p>
+<p><code>size</code> 是那个区域的大小（必须是 PAGE_SIZE 的倍数）</p>
+<p>返回值要么是指向 cpu 虚拟地址的指针，要么是个错误（通过 <code>PTR_ERR()</code>），如果该区域的任何部分被占用的话。</p>
+<h2 id="调试使用-DMA-API-的驱动程序"><a href="#调试使用-DMA-API-的驱动程序" class="headerlink" title="调试使用 DMA-API 的驱动程序"></a>调试使用 DMA-API 的驱动程序</h2><p>如上所述的 DMA-API 有一些限制。例如，释放 DMA 地址时必须使用相同大小的对应函数。随着硬件 IOMMUs 的出现，对于驱动程序来说，不违反这些约束变得越来越重要。在最坏的情况下，这种违反可能导致数据损坏，甚至破坏文件系统。</p>
+<p>为了调试驱动程序并发现 DMA-API 使用中的 bug，可以将检查代码编译到内核中，它将告诉开发人员这些违规行为。如果你的体系结构支持它，您可以在内核配置中选择 ”Enable<br>debugging of DMA-API usage“ 选项。启用该选项会对性能产生影响，不要在生产内核中启用它。</p>
+<p>如果开启了上面的配置，内核将会包含一些记录了为哪个设备分配了哪些 DMA内存的代码。如果这段代码检测到错误，它会在内核日志中打印一条带有一些详细信息的警告消息。一个示例警告消息可能如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs c">WARNING: at /data2/repos/linux<span class="hljs-number">-2.6</span>-iommu/lib/dma-debug.c:<span class="hljs-number">448</span><br>	check_unmap+<span class="hljs-number">0x203</span>/<span class="hljs-number">0x490</span>()<br>Hardware name:<br>forcedeth <span class="hljs-number">0000</span>:<span class="hljs-number">00</span>:<span class="hljs-number">08.0</span>: DMA-API: device driver frees DMA memory with wrong function [device address=<span class="hljs-number">0x00000000640444be</span>] [size=<span class="hljs-number">66</span> bytes] [mapped as single] [unmapped as page]<br>Modules linked in: nfsd exportfs bridge stp llc r8169<br>Pid: <span class="hljs-number">0</span>, comm: swapper Tainted: G        W  <span class="hljs-number">2.6</span><span class="hljs-number">.28</span>-dmatest<span class="hljs-number">-09289</span>-g8bb99c0 #<span class="hljs-number">1</span><br>Call Trace:<br>&lt;IRQ&gt;  [&lt;ffffffff80240b22&gt;] warn_slowpath+<span class="hljs-number">0xf2</span>/<span class="hljs-number">0x130</span><br>[&lt;ffffffff80647b70&gt;] _spin_unlock+<span class="hljs-number">0x10</span>/<span class="hljs-number">0x30</span><br>[&lt;ffffffff80537e75&gt;] usb_hcd_link_urb_to_ep+<span class="hljs-number">0x75</span>/<span class="hljs-number">0xc0</span><br>[&lt;ffffffff80647c22&gt;] _spin_unlock_irqrestore+<span class="hljs-number">0x12</span>/<span class="hljs-number">0x40</span><br>[&lt;ffffffff8055347f&gt;] ohci_urb_enqueue+<span class="hljs-number">0x19f</span>/<span class="hljs-number">0x7c0</span><br>[&lt;ffffffff80252f96&gt;] queue_work+<span class="hljs-number">0x56</span>/<span class="hljs-number">0x60</span><br>[&lt;ffffffff80237e10&gt;] enqueue_task_fair+<span class="hljs-number">0x20</span>/<span class="hljs-number">0x50</span><br>[&lt;ffffffff80539279&gt;] usb_hcd_submit_urb+<span class="hljs-number">0x379</span>/<span class="hljs-number">0xbc0</span><br>[&lt;ffffffff803b78c3&gt;] cpumask_next_and+<span class="hljs-number">0x23</span>/<span class="hljs-number">0x40</span><br>[&lt;ffffffff80235177&gt;] find_busiest_group+<span class="hljs-number">0x207</span>/<span class="hljs-number">0x8a0</span><br>[&lt;ffffffff8064784f&gt;] _spin_lock_irqsave+<span class="hljs-number">0x1f</span>/<span class="hljs-number">0x50</span><br>[&lt;ffffffff803c7ea3&gt;] check_unmap+<span class="hljs-number">0x203</span>/<span class="hljs-number">0x490</span><br>[&lt;ffffffff803c8259&gt;] debug_dma_unmap_page+<span class="hljs-number">0x49</span>/<span class="hljs-number">0x50</span><br>[&lt;ffffffff80485f26&gt;] nv_tx_done_optimized+<span class="hljs-number">0xc6</span>/<span class="hljs-number">0x2c0</span><br>[&lt;ffffffff80486c13&gt;] nv_nic_irq_optimized+<span class="hljs-number">0x73</span>/<span class="hljs-number">0x2b0</span><br>[&lt;ffffffff8026df84&gt;] handle_IRQ_event+<span class="hljs-number">0x34</span>/<span class="hljs-number">0x70</span><br>[&lt;ffffffff8026ffe9&gt;] handle_edge_irq+<span class="hljs-number">0xc9</span>/<span class="hljs-number">0x150</span><br>[&lt;ffffffff8020e3ab&gt;] do_IRQ+<span class="hljs-number">0xcb</span>/<span class="hljs-number">0x1c0</span><br>[&lt;ffffffff8020c093&gt;] ret_from_intr+<span class="hljs-number">0x0</span>/<span class="hljs-number">0xa</span><br>&lt;EOI&gt; &lt;<span class="hljs-number">4</span>&gt;---[ end trace f6435a98e2a38c0e ]---<br></code></pre></td></tr></table></figure>
+
+<p>驱动程序开发人员可以找到包括导致此警告的 DMA-API 调用的栈跟踪的驱动程序和设备。</p>
+<p>默认情况下，只有第一个错误才会产生警告消息。所有其他错误将只静默计数。存在此限制是为了防止代码淹没内核日志。为了支持调试设备驱动程序，可以通过 <code>debugfs</code> 禁用此功能。详细信息请参阅下面的 <code>debugfs</code> 接口文档。</p>
+<p>DMA-API 调试代码的 <code>debugfs</code> 目录称为 <code>DMA-API/</code>。在这个目录下，目前可以找到以下文件:</p>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>dma-api&#x2F;all_errors</td>
+<td>该文件包含一个数值。如果这个值不等于零，调试代码将为它发现的每个错误打印一个警告到内核日志中。要小心使用这个选项，因为它很容易淹没您的日志</td>
+</tr>
+<tr>
+<td>dma-api&#x2F;disabled</td>
+<td>如果调试代码被禁用，则此只读文件包含字符 ‘Y’。当内存耗尽或在引导时禁用它时，就会发生这种情况</td>
+</tr>
+<tr>
+<td>dma-api&#x2F;error_count</td>
+<td>该文件是只读的，并显示发现的错误总数</td>
+</tr>
+<tr>
+<td>dma-api&#x2F;num_errors</td>
+<td>这个文件中的数字显示在内核日志停止之前将有多少个警告被打印到内核日志中。这个数字在系统启动时初始化为 1，并通过写入这个文件来设置</td>
+</tr>
+<tr>
+<td>dma-api&#x2F;min_free_entries</td>
+<td>可以读取这个只读文件以获得分配器所能看到的空闲 <code>dma_debug_entries</code> 的最小数量。如果该值降至零，代码将尝试增加 <code>nr_total_entries</code> 以进行补偿</td>
+</tr>
+<tr>
+<td>dma-api&#x2F;num_free_entries</td>
+<td>分配器中空闲的 <code>dma_debug_entries</code> 的当前数目</td>
+</tr>
+<tr>
+<td>dma-api&#x2F;nr_total_entries</td>
+<td>分配器中空闲和已使用的 <code>dma_debug_entries</code> 的总数</td>
+</tr>
+<tr>
+<td>dma-api&#x2F;driver-filter</td>
+<td>您可以将驱动程序的名称写入此文件，以将调试输出限制为来自该特定驱动程序的请求。将一个空字符串写入该文件以禁用过滤器并再次查看所有错误</td>
+</tr>
+</tbody></table>
+<p>如果你将此代码编译到内核中，它将在默认情况下启用。如果你想在没有记录的情况下启动，你可以提供’<code>dma_debug=off</code>‘作为启动参数。这将关闭 DMA-API 调试。注意，你不能在运行时再次启用它。你必须重新启动。</p>
+<p>如果你只想查看特定设备驱动程序的调试消息，可以指定 dma_debug_driver&#x3D;<drivername> 参数。这将在引导时启用驱动程序过滤器。之后，调试代码将只打印该驱动程序的错误。该过滤器以后可以使用 <code>debugfs</code> 禁用或更改。</p>
+<p>当代码在运行时禁用自己，很可能是因为它耗尽了 <code>dma_debug_entries</code> ，无法按需分配更多的调试项。在启动时预分配 65536 个条目-如果这个值太低，您可以使用 ‘<code>dma_debug_entries</code>&#x3D;<your_desired_number>‘ 来覆盖默认值。请注意，代码分批分配条目，因此预分配条目的确切数量可能大于实际请求的数量。每次动态分配与初始预分配相同数量的条目时，代码将打印到内核日志中。这是为了表明更大的预分配大小可能是合适的，或者一个驱动程序可能连续映射泄露。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">debug_dma_mapping_error</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, <span class="hljs-type">dma_addr_t</span> dma_addr)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>dma-debug 接口 <code>debug_dma_mapping_error()</code> 用于调试无法在 <code>dma_map_single()</code> 和<code>dma_map_page()</code>接口返回的地址上检查 dma 映射错误的驱动程序。此接口清除了由 <code>debug_dma_map_page()</code> 设置的标志，以指示驱动程序已调用 <code>dma_mapping_error()</code>。当驱动程序执行 unmap 时，<code>debug_dma_unmap()</code> 检查标志，如果该标志仍然设置了，则打印警告消息，其中包括导致 unmap 的调用跟踪。可以从 <code>dma_mapping_error()</code> 例程调用此接口，以启用 dma 映射错误检查调试。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/DMA/" class="category-chain-item">DMA</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linux/" class="print-no-link">#Linux</a>
+      
+        <a href="/tags/DMA/" class="print-no-link">#DMA</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Dynamic DMA mapping using the generic device</div>
+      <div>http://example.com/2023/10/15/linux/kernel/other/DMA/Dynamic DMA mapping using the generic device/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Gao Xiang</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年10月15日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/10/15/linux/kernel/memory/memblock/" title="memblock 分析">
+                        <span class="hidden-mobile">memblock 分析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

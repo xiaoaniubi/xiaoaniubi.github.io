@@ -18,8 +18,8 @@
   
     <meta name="description" content="Linux Kernel">
 <meta property="og:type" content="website">
-<meta property="og:title" content="标签">
-<meta property="og:url" content="http://example.com/tags/index.html">
+<meta property="og:title" content="Xiaoa&#39;s Blog">
+<meta property="og:url" content="http://example.com/page/2/index.html">
 <meta property="og:site_name" content="Xiaoa&#39;s Blog">
 <meta property="og:description" content="Linux Kernel">
 <meta property="og:locale" content="zh_CN">
@@ -29,7 +29,7 @@
   
   
   
-  <title>标签 - Xiaoa&#39;s Blog</title>
+  <title>Xiaoa&#39;s Blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -110,7 +110,7 @@
   <header>
     
 
-<div class="header-inner" style="height: 80vh;">
+<div class="header-inner" style="height: 100vh;">
   <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
   <div class="container">
     <a class="navbar-brand" href="/">
@@ -222,13 +222,13 @@
   
 
 <div id="banner" class="banner" parallax=true
-     style="background: url('/img/%E6%B2%99%E6%BC%A0%E6%8B%8D%E7%85%A7.jpg') no-repeat center center; background-size: cover;">
+     style="background: url('/img/%E6%B2%99%E6%BC%A0.jpg') no-repeat center center; background-size: cover;">
   <div class="full-bg-img">
     <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="标签"></span>
+            <span id="subtitle" data-typed-text="高翔的博客"></span>
           
         </div>
 
@@ -252,16 +252,258 @@
     
       <div class="container nopadding-x-md">
         <div id="board"
-          >
+          style="margin-top: 0">
           
           <div class="container">
             <div class="row">
               <div class="col-12 col-md-10 m-auto">
                 
 
-<div class="text-center tagcloud">
-  <a href="/tags/DMA/" style="font-size: 20px; color: #8ea5dc">DMA</a> <a href="/tags/Linux/" style="font-size: 30px; color: #337ab7">Linux</a> <a href="/tags/%E5%86%85%E5%AD%98/" style="font-size: 25px; color: #6090c9">内存</a> <a href="/tags/%E9%A1%B5%E8%A1%A8/" style="font-size: 15px; color: #bbe">页表</a>
-</div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/" target="_self">
+          ARM64 页表映射
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/" target="_self">
+        <div>
+          ARM64 页表映射对于 ARM64 架构来说，目前基于 ARMv8-A 架构的处理器最大可以支持到 48 根地址线，也就是寻址 2^48 的虚拟地址空间，即虚拟地址空间范围为 0x0000000000000000～0x0000FFFFFFFFFFFF，共 256TB。其实完全可以做到 64 根地址线，那么最大就可以寻找到 2^64 的虚拟地址空间。但是对于目前的应用来说，256TB 的虚拟地址空
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2023-10-08 18:50" pubdate>
+              2023-10-08
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+              <a href="/tags/%E9%A1%B5%E8%A1%A8/">#页表</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2023/10/08/linux/kernel/memory/%E9%A1%B5%E8%A1%A8/" target="_self">
+          页表
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/memory/%E9%A1%B5%E8%A1%A8/" target="_self">
+        <div>
+          页表页表AArch64 架构支持两种页表转换模式  单一阶段页表转换：把虚拟地址（VA）转换成物理地址（PA） 虚拟化扩展中的两阶段页表转换： 阶段1：把虚拟地址（VA）转换成中间物理地址（IPA） 阶段2：把 IPA 转换成最终的物理地址 PA    ARMv8 支持多种页表格式：  ARMv8 的长描述符页表格式 ARMv7 的长描述符页表格式，但是需要打开大物理地址扩展（LPAE） ARMv
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2023-10-08 18:50" pubdate>
+              2023-10-08
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+              <a href="/tags/%E9%A1%B5%E8%A1%A8/">#页表</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2023/10/08/linux/kernel/memory/%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%B8%AD%E7%9A%84%E5%86%85%E5%AD%98%E9%83%A8%E5%88%86/" target="_self">
+          开机启动中的内存相关
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/memory/%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%B8%AD%E7%9A%84%E5%86%85%E5%AD%98%E9%83%A8%E5%88%86/" target="_self">
+        <div>
+          开机启动中内存相关在启动汇编代码文件 arch/arm64/kernel/head.S 中，刚开始 MMU 是关闭的，不能使用高速缓存功能，而在后面某个阶段会打开 MMU 并且使能数据高速缓存以提高性能。 Documentation/arm64/booting.txt 1234567891011- Caches, MMUs  The MMU must be off.  Instruction ca
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2023-10-08 18:50" pubdate>
+              2023-10-08
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+
+
+  <nav aria-label="navigation">
+    <span class="pagination" id="pagination">
+      <a class="extend prev" rel="prev" href="/"><i class="iconfont icon-arrowleft"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
+    </span>
+  </nav>
+
+
 
               </div>
             </div>

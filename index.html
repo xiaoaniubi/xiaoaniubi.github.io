@@ -266,8 +266,316 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
+        <a href="/2023/10/15/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20using%20the%20generic%20device/" target="_self">
+          Dynamic DMA mapping using the generic device
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/15/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20using%20the%20generic%20device/" target="_self">
+        <div>
+          Dynamic DMA mapping using the generic device这篇文档描述了 DMA API。有关 API 更简洁的介绍（实际例子），可以看 Documentation/DMA-API-HOWTO.txt 这篇文档分为两部分，Part I 描述了最基本的 API，Part II 描述了支持非一致性内存机制的扩展。除非你的驱动必须支持非一致性平台（这个通常只有旧的平台才有）
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2023-10-15 20:25" pubdate>
+              2023-10-15
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/DMA/" class="category-chain-item">DMA</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/DMA/">#DMA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2023/10/15/linux/kernel/memory/memblock/" target="_self">
+          memblock 分析
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/15/linux/kernel/memory/memblock/" target="_self">
+        <div>
+          memblock 分析在系统初始化初期，在伙伴系统没有建立起来之前也有一些内存分配的需求。内核为此开了一个简单的内存管理 - memblock，它在 setup_arch() 中建立起来，然后在 mem_init() 中将内存管理权移交给伙伴系统。 memblock 管理着一个个连续的物理内存区域，并且它们都有不同的属性，比如 “memory” 、”reserved” 等。 数据结构内核中定义了一
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2023-10-15 20:25" pubdate>
+              2023-10-15
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2023/10/15/linux/kernel/memory/arm64%20%E5%86%85%E5%AD%98%E5%88%86%E5%B8%83/" target="_self">
+          ARM64 内存分布
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/15/linux/kernel/memory/arm64%20%E5%86%85%E5%AD%98%E5%88%86%E5%B8%83/" target="_self">
+        <div>
+          ARM64 内存分布ARM64 架构处理器采用 48 位的物理寻址机制，最多可以寻址 256TB 物理地址空间。虚拟地址也最高支持 48 位寻址。所以在处理器设计架构上，把虚拟地址空间划分为两个空间，用户空间和内核空间，并且每个空间最多寻址 256TB。  App space：0x00000000_00000000  ~ 0x0000FFFF_FFFFFFFF Kernel space：0xFFF
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2023-10-15 20:25" pubdate>
+              2023-10-15
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2023/10/15/linux/kernel/memory/%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E5%88%9D%E5%A7%8B%E5%8C%96/" target="_self">
+          物理内存初始化
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/15/linux/kernel/memory/%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E5%88%9D%E5%A7%8B%E5%8C%96/" target="_self">
+        <div>
+          物理内存初始化伙伴系统（buddy system）是操作系统常用的一种动态管理内存的方法。在用户提出申请时，分配一个大小合适的内存块给用户，并在用户释放后回收。在伙伴系统中，内存块的大小是 2 的 order 次幂个页面。内核中 order 的最大值用 MAX_ORDER 宏来表示。 123456/* Free memory management - zoned buddy allocator.
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2023-10-15 20:25" pubdate>
+              2023-10-15
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
         <a href="/2023/10/10/linux/kernel/memory/%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84/" target="_self">
-          
+          物理内存映射
         </a>
       </h2>
 
@@ -288,6 +596,50 @@
           </div>
         
         
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+          </div>
         
       </div>
     </article>
@@ -300,7 +652,7 @@
       <h2 class="index-header">
         
         <a href="/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E5%B1%9E%E6%80%A7/" target="_self">
-          
+          内存类型和属性
         </a>
       </h2>
 
@@ -321,6 +673,50 @@
           </div>
         
         
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+          </div>
         
       </div>
     </article>
@@ -333,14 +729,14 @@
       <h2 class="index-header">
         
         <a href="/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" target="_self">
-          
+          内存管理数据结构
         </a>
       </h2>
 
       
       <a class="index-excerpt index-excerpt__noimg" href="/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" target="_self">
         <div>
-          数据结构在大部分 Linux 操作系统种，内存的初始化一般都在 bootloader 中完成，然后在将内存大小传给 Linux 内核，因此从 Linux 内核的角度来看，内存其实就是一段物理内存空间。 在 Linux 内核中，和内存硬件物理特性相关的一些数据结构主要集中在 MMU（页表、高速缓存&#x2F;TLB 操作等）中。所以 Linux 内核中内存管理的数据结构基本都是软件层面的概念，比如:
+          内存管理数据结构在大部分 Linux 操作系统种，内存的初始化一般都在 bootloader 中完成，然后在将内存大小传给 Linux 内核，因此从 Linux 内核的角度来看，内存其实就是一段物理内存空间。 在 Linux 内核中，和内存硬件物理特性相关的一些数据结构主要集中在 MMU（页表、高速缓存&#x2F;TLB 操作等）中。所以 Linux 内核中内存管理的数据结构基本都是软件层面的概念
         </div>
       </a>
 
@@ -354,39 +750,50 @@
           </div>
         
         
-        
-      </div>
-    </article>
-  </div>
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
 
-  <div class="row mx-auto index-card">
+<span class="category-chains">
+  
+  
     
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
     
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h2 class="index-header">
-        
-        <a href="/2023/10/08/linux/kernel/other/DMA/dma-mapping/" target="_self">
-          
-        </a>
-      </h2>
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
 
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/other/DMA/dma-mapping/" target="_self">
-        <div>
-          dma-mapping API 分析
-        </div>
-      </a>
+  
 
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2023-10-08 18:50" pubdate>
-              2023-10-08
-            </time>
+  
+
+      </span>
+    
+  
+</span>
+
           </div>
         
         
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/%E5%86%85%E5%AD%98/">#内存</a>
+            
+          </div>
         
       </div>
     </article>
@@ -399,14 +806,14 @@
       <h2 class="index-header">
         
         <a href="/2023/10/08/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20Guide/" target="_self">
-          
+          Dynamic DMA mapping Guide
         </a>
       </h2>
 
       
       <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20Guide/" target="_self">
         <div>
-          Dynamic DMA mapping Guide
+          Dynamic DMA mapping Guide这是一篇指导驱动工程师如何使用 DMA API 的文档，为了方便理解，文档中给出了伪代码的例程。有关 API 的简要描述，请参见 DMA-API.txt。 CPU 虚拟地址和 DMA 总线地址在 DMA API中涉及好几个地址的概念（虚拟地址、物理地址、总线地址），正确的理解这些地址是非常重要的。 内核通常使用的地址是虚拟地址。我们调用 kmall
         </div>
       </a>
 
@@ -420,6 +827,50 @@
           </div>
         
         
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/DMA/" class="category-chain-item">DMA</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/DMA/">#DMA</a>
+            
+          </div>
         
       </div>
     </article>
@@ -432,14 +883,14 @@
       <h2 class="index-header">
         
         <a href="/2023/10/08/linux/kernel/other/DMA/dma_buf/" target="_self">
-          
+          DMA_BUF 框架
         </a>
       </h2>
 
       
       <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/other/DMA/dma_buf/" target="_self">
         <div>
-          DMA_BUF 框架
+          DMA_BUF 框架为什么要引入 dma_buf? 之前的内核中缺少一个可以让不同设备、子系统之间进行内存共享的统一机制  在没有引入 dma_buf 之前内核中不同设备、子系统之间共享数据的方式是什么？  各个 soc 厂商驱动、各种框架和子系统各自实现自己的机制   引入后的优势：  设备间数据共享： dma_buf 主要设计用于在不同设备之间进行零拷贝数据共享。它提供了一个通用的接口，允许多
         </div>
       </a>
 
@@ -453,6 +904,50 @@
           </div>
         
         
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/DMA/" class="category-chain-item">DMA</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/DMA/">#DMA</a>
+            
+          </div>
         
       </div>
     </article>
@@ -464,15 +959,15 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
-        <a href="/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/" target="_self">
-          
+        <a href="/2023/10/08/linux/kernel/other/DMA/dma-mapping/" target="_self">
+          dma-mapping API 分析
         </a>
       </h2>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/" target="_self">
+      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/other/DMA/dma-mapping/" target="_self">
         <div>
-          arm64 页表映射
+          dma-mapping API 分析dma_alloc_coherentinclude/linux/dma-mapping.h 12345static inline void *dma_alloc_coherent(struct device *dev, size_t size, dma_addr_t *dma_handle, gfp_t gfp)&#123;	return dma_alloc_a
         </div>
       </a>
 
@@ -486,78 +981,62 @@
           </div>
         
         
-        
-      </div>
-    </article>
-  </div>
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
 
-  <div class="row mx-auto index-card">
+<span class="category-chains">
+  
+  
     
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
     
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h2 class="index-header">
-        
-        <a href="/2023/10/08/linux/kernel/memory/%E9%A1%B5%E8%A1%A8/" target="_self">
-          
-        </a>
-      </h2>
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/DMA/" class="category-chain-item">DMA</a>
+  
+  
 
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/memory/%E9%A1%B5%E8%A1%A8/" target="_self">
-        <div>
-          页表
-        </div>
-      </a>
+  
 
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2023-10-08 18:50" pubdate>
-              2023-10-08
-            </time>
+  
+
+      </span>
+    
+  
+</span>
+
           </div>
         
         
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h2 class="index-header">
-        
-        <a href="/2023/10/08/linux/kernel/memory/%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%B8%AD%E7%9A%84%E5%86%85%E5%AD%98%E9%83%A8%E5%88%86/" target="_self">
-          
-        </a>
-      </h2>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2023/10/08/linux/kernel/memory/%E5%90%AF%E5%8A%A8%E4%BB%A3%E7%A0%81%E4%B8%AD%E7%9A%84%E5%86%85%E5%AD%98%E9%83%A8%E5%88%86/" target="_self">
-        <div>
-          开机启动中内存相关
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2023-10-08 18:50" pubdate>
-              2023-10-08
-            </time>
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Linux/">#Linux</a>
+            
+              <a href="/tags/DMA/">#DMA</a>
+            
           </div>
         
-        
-        
       </div>
     </article>
   </div>
 
 
+
+  <nav aria-label="navigation">
+    <span class="pagination" id="pagination">
+      <span class="page-number current">1</span><a class="page-number" href="/page/2/#board">2</a><a class="extend next" rel="next" href="/page/2/#board"><i class="iconfont icon-arrowright"></i></a>
+    </span>
+  </nav>
 
 
 

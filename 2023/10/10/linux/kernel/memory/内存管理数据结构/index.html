@@ -16,25 +16,26 @@
   <meta name="author" content="Gao Xiang">
   <meta name="keywords" content="Linux">
   
-    <meta name="description" content="数据结构在大部分 Linux 操作系统种，内存的初始化一般都在 bootloader 中完成，然后在将内存大小传给 Linux 内核，因此从 Linux 内核的角度来看，内存其实就是一段物理内存空间。 在 Linux 内核中，和内存硬件物理特性相关的一些数据结构主要集中在 MMU（页表、高速缓存&#x2F;TLB 操作等）中。所以 Linux 内核中内存管理的数据结构基本都是软件层面的概念，比如:">
+    <meta name="description" content="内存管理数据结构在大部分 Linux 操作系统种，内存的初始化一般都在 bootloader 中完成，然后在将内存大小传给 Linux 内核，因此从 Linux 内核的角度来看，内存其实就是一段物理内存空间。 在 Linux 内核中，和内存硬件物理特性相关的一些数据结构主要集中在 MMU（页表、高速缓存&#x2F;TLB 操作等）中。所以 Linux 内核中内存管理的数据结构基本都是软件层面的概念">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Xiaoa&#39;s Blog">
+<meta property="og:title" content="内存管理数据结构">
 <meta property="og:url" content="http://example.com/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/index.html">
 <meta property="og:site_name" content="Xiaoa&#39;s Blog">
-<meta property="og:description" content="数据结构在大部分 Linux 操作系统种，内存的初始化一般都在 bootloader 中完成，然后在将内存大小传给 Linux 内核，因此从 Linux 内核的角度来看，内存其实就是一段物理内存空间。 在 Linux 内核中，和内存硬件物理特性相关的一些数据结构主要集中在 MMU（页表、高速缓存&#x2F;TLB 操作等）中。所以 Linux 内核中内存管理的数据结构基本都是软件层面的概念，比如:">
+<meta property="og:description" content="内存管理数据结构在大部分 Linux 操作系统种，内存的初始化一般都在 bootloader 中完成，然后在将内存大小传给 Linux 内核，因此从 Linux 内核的角度来看，内存其实就是一段物理内存空间。 在 Linux 内核中，和内存硬件物理特性相关的一些数据结构主要集中在 MMU（页表、高速缓存&#x2F;TLB 操作等）中。所以 Linux 内核中内存管理的数据结构基本都是软件层面的概念">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310101311926.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310101540312.png">
 <meta property="article:published_time" content="2023-10-10T04:53:36.722Z">
-<meta property="article:modified_time" content="2023-10-10T11:48:59.399Z">
+<meta property="article:modified_time" content="2023-10-15T14:40:16.062Z">
 <meta property="article:author" content="Gao Xiang">
 <meta property="article:tag" content="Linux">
+<meta property="article:tag" content="内存">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/xiaoaniubi/PicGo/main/img/202310101311926.png">
   
   
   
-  <title>Xiaoa&#39;s Blog</title>
+  <title>内存管理数据结构 - Xiaoa&#39;s Blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -239,7 +240,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text=""></span>
+            <span id="subtitle" data-typed-text="内存管理数据结构"></span>
           
         </div>
 
@@ -333,12 +334,12 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header"></h1>
+            <h1 id="seo-header">内存管理数据结构</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h1><p>在大部分 Linux 操作系统种，内存的初始化一般都在 bootloader 中完成，然后在将内存大小传给 Linux 内核，因此从 Linux 内核的角度来看，内存其实就是一段物理内存空间。</p>
+                <h1 id="内存管理数据结构"><a href="#内存管理数据结构" class="headerlink" title="内存管理数据结构"></a>内存管理数据结构</h1><p>在大部分 Linux 操作系统种，内存的初始化一般都在 bootloader 中完成，然后在将内存大小传给 Linux 内核，因此从 Linux 内核的角度来看，内存其实就是一段物理内存空间。</p>
 <p>在 Linux 内核中，和内存硬件物理特性相关的一些数据结构主要集中在 MMU（页表、高速缓存&#x2F;TLB 操作等）中。所以 Linux 内核中内存管理的数据结构基本都是软件层面的概念，比如:</p>
 <ul>
 <li>mm（<code>struct mm_struct</code>）</li>
@@ -400,6 +401,50 @@
             <div>
               <div class="post-metas my-3">
   
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/%E5%86%85%E5%AD%98/" class="category-chain-item">内存</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linux/" class="print-no-link">#Linux</a>
+      
+        <a href="/tags/%E5%86%85%E5%AD%98/" class="print-no-link">#内存</a>
+      
+    </div>
   
 </div>
 
@@ -409,7 +454,7 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div></div>
+      <div>内存管理数据结构</div>
       <div>http://example.com/2023/10/10/linux/kernel/memory/内存管理数据结构/</div>
     </div>
     <div class="license-meta">
@@ -454,9 +499,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E5%B1%9E%E6%80%A7/" title="">
+                      <a href="/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E5%B1%9E%E6%80%A7/" title="内存类型和属性">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile"></span>
+                        <span class="hidden-mobile">内存类型和属性</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -464,8 +509,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2023/10/08/linux/kernel/other/DMA/dma-mapping/" title="">
-                        <span class="hidden-mobile"></span>
+                      <a href="/2023/10/08/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20Guide/" title="Dynamic DMA mapping Guide">
+                        <span class="hidden-mobile">Dynamic DMA mapping Guide</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
@@ -480,25 +525,6 @@
   
     <article id="comments" lazyload>
       
-  <div class="disqus" style="width:100%">
-    <div id="disqus_thread"></div>
-    
-      <script type="text/javascript">
-        var disqus_config = function() {
-          this.page.url = 'http://example.com/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/';
-          this.page.identifier = '/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/';
-        };
-        Fluid.utils.loadComments('#disqus_thread', function() {
-          var d = document, s = d.createElement('script');
-          s.src = '//' + 'fluid' + '.disqus.com/embed.js';
-          s.setAttribute('data-timestamp', new Date());
-          (d.head || d.body).appendChild(s);
-        });
-      </script>
-    
-    <noscript>Please enable JavaScript to view the comments</noscript>
-  </div>
-
 
     </article>
   

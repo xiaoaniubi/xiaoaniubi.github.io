@@ -16,22 +16,23 @@
   <meta name="author" content="Gao Xiang">
   <meta name="keywords" content="Linux">
   
-    <meta name="description" content="dma-mapping API 分析">
+    <meta name="description" content="dma-mapping API 分析dma_alloc_coherentinclude&#x2F;linux&#x2F;dma-mapping.h 12345static inline void *dma_alloc_coherent(struct device *dev, size_t size, dma_addr_t *dma_handle, gfp_t gfp)&amp;#123;	return dma_alloc_a">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Xiaoa&#39;s Blog">
+<meta property="og:title" content="dma-mapping API 分析">
 <meta property="og:url" content="http://example.com/2023/10/08/linux/kernel/other/DMA/dma-mapping/index.html">
 <meta property="og:site_name" content="Xiaoa&#39;s Blog">
-<meta property="og:description" content="dma-mapping API 分析">
+<meta property="og:description" content="dma-mapping API 分析dma_alloc_coherentinclude&#x2F;linux&#x2F;dma-mapping.h 12345static inline void *dma_alloc_coherent(struct device *dev, size_t size, dma_addr_t *dma_handle, gfp_t gfp)&amp;#123;	return dma_alloc_a">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2023-10-08T10:50:46.454Z">
-<meta property="article:modified_time" content="2023-10-08T15:26:47.206Z">
+<meta property="article:modified_time" content="2023-10-15T14:41:35.668Z">
 <meta property="article:author" content="Gao Xiang">
 <meta property="article:tag" content="Linux">
+<meta property="article:tag" content="DMA">
 <meta name="twitter:card" content="summary_large_image">
   
   
   
-  <title>Xiaoa&#39;s Blog</title>
+  <title>dma-mapping API 分析 - Xiaoa&#39;s Blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -236,7 +237,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text=""></span>
+            <span id="subtitle" data-typed-text="dma-mapping API 分析"></span>
           
         </div>
 
@@ -330,15 +331,13 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header"></h1>
+            <h1 id="seo-header">dma-mapping API 分析</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="dma-mapping-API-分析"><a href="#dma-mapping-API-分析" class="headerlink" title="dma-mapping API 分析"></a>dma-mapping API 分析</h1><span id="more"></span>
-<h2 id="dma-alloc-coherent"><a href="#dma-alloc-coherent" class="headerlink" title="dma_alloc_coherent"></a>dma_alloc_coherent</h2><p><code>include/linux/dma-mapping.h</code></p>
+                <h1 id="dma-mapping-API-分析"><a href="#dma-mapping-API-分析" class="headerlink" title="dma-mapping API 分析"></a>dma-mapping API 分析</h1><h2 id="dma-alloc-coherent"><a href="#dma-alloc-coherent" class="headerlink" title="dma_alloc_coherent"></a>dma_alloc_coherent</h2><p><code>include/linux/dma-mapping.h</code></p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-type">void</span> *<span class="hljs-title function_">dma_alloc_coherent</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> device *dev, <span class="hljs-type">size_t</span> size, <span class="hljs-type">dma_addr_t</span> *dma_handle, <span class="hljs-type">gfp_t</span> gfp)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> dma_alloc_attrs(dev, size, dma_handle, gfp,<br>			(gfp &amp; __GFP_NOWARN) ? DMA_ATTR_NO_WARN : <span class="hljs-number">0</span>);<br>&#125;<br></code></pre></td></tr></table></figure>
-
 
 
                 
@@ -348,6 +347,50 @@
             <div>
               <div class="post-metas my-3">
   
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E6%8A%80%E6%9C%AF/" class="category-chain-item">技术</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/" class="category-chain-item">Linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/%E6%8A%80%E6%9C%AF/Linux/DMA/" class="category-chain-item">DMA</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Linux/" class="print-no-link">#Linux</a>
+      
+        <a href="/tags/DMA/" class="print-no-link">#DMA</a>
+      
+    </div>
   
 </div>
 
@@ -357,7 +400,7 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div></div>
+      <div>dma-mapping API 分析</div>
       <div>http://example.com/2023/10/08/linux/kernel/other/DMA/dma-mapping/</div>
     </div>
     <div class="license-meta">
@@ -402,9 +445,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2023/10/10/linux/kernel/memory/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" title="">
+                      <a href="/2023/10/08/linux/kernel/other/DMA/dma_buf/" title="DMA_BUF 框架">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile"></span>
+                        <span class="hidden-mobile">DMA_BUF 框架</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -412,8 +455,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2023/10/08/linux/kernel/other/DMA/Dynamic%20DMA%20mapping%20Guide/" title="">
-                        <span class="hidden-mobile"></span>
+                      <a href="/2023/10/08/linux/kernel/memory/arm64%20%E9%A1%B5%E8%A1%A8%E6%98%A0%E5%B0%84/" title="ARM64 页表映射">
+                        <span class="hidden-mobile">ARM64 页表映射</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
@@ -428,25 +471,6 @@
   
     <article id="comments" lazyload>
       
-  <div class="disqus" style="width:100%">
-    <div id="disqus_thread"></div>
-    
-      <script type="text/javascript">
-        var disqus_config = function() {
-          this.page.url = 'http://example.com/2023/10/08/linux/kernel/other/DMA/dma-mapping/';
-          this.page.identifier = '/2023/10/08/linux/kernel/other/DMA/dma-mapping/';
-        };
-        Fluid.utils.loadComments('#disqus_thread', function() {
-          var d = document, s = d.createElement('script');
-          s.src = '//' + 'fluid' + '.disqus.com/embed.js';
-          s.setAttribute('data-timestamp', new Date());
-          (d.head || d.body).appendChild(s);
-        });
-      </script>
-    
-    <noscript>Please enable JavaScript to view the comments</noscript>
-  </div>
-
 
     </article>
   
